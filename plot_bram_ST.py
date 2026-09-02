@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from scipy.optimize import curve_fit
+import ast  # To parse matrix strings from CSV if needed
 
 # Aesthetics
 mpl.rcParams['svg.fonttype'] = 'none'
@@ -14,20 +14,16 @@ mpl.rcParams['mathtext.fontset'] = 'stix'
 hbar_c = 197.3269804
 r0_fm = 0.4547
 r0_MeV = r0_fm / hbar_c
-mu_dim = np.sqrt(210) * r0_MeV
 gamma_E = np.euler_gamma  
 
 A_types = ['Ar0', 'Api12']
-A_latex = ['r_0','\\pi/12']
+A_latex = ['r_0', '\\pi/12']
 A_index = 0
-# Flag LQCD
-LQCD = True  # Canvia a True per carregar els resultats de fit_results_ST_full_...
+LQCD = False
 
 data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/data_bram_{A_types[A_index]}.csv'
-
-# Selecció dinàmica del nom de fitxer segons la variable LQCD
 lqcd_str = "_full" if LQCD else ""
-filename = f'fit_results_ST{lqcd_str}_{A_types[A_index]}.csv'
+filename = f'fit_results{lqcd_str}_ST_{A_types[A_index]}.csv'
 
 df = pd.read_csv(data_file, sep=r'\s+')
 df['mass_group'] = df['Ensemble'].apply(lambda s: "_".join(s.split('_')[-2:]))
@@ -46,16 +42,27 @@ def calculate_dimensionless(df_row, prefix):
     x_err = x * (r0_a_err / r0_a)
     return x, x_err, y, y_err
 
-# Updated Model Function to conditionally include c2_l
-def model_func_dim(x, y_0, c_l, c2_l=0.0):
-    log_arg = np.maximum((c_l**2 * x**2) / (4 * np.pi * mu_dim**2), 1e-15)
-    term1 = (c_l**2 / (2 * np.pi)) * x**2
-    term2 = 1 + gamma_E - np.log(log_arg)
-    return y_0 - term1 * term2 + c2_l * (x**2)
+# Model functions
+def model_func_dim(x, y_0, c_l, mu):
+    log_arg = np.maximum((c_l**2 * x**2) / (4 * np.pi * mu**2), 1e-15)
+    return y_0 - ((c_l**2 / (2 * np.pi)) * x**2) * (1 + gamma_E - np.log(log_arg))
+
+def model_func2_dim(x, y_0, c_l, c2_l, mu):
+    z = c_l * x + c2_l
+    log_arg = np.maximum((z**2) / (4 * np.pi * mu**2), 1e-15)
+    return y_0 - ((1 / (2 * np.pi)) * z**2) * (1 + gamma_E - np.log(log_arg))
 
 data_types = ['bare', 'smeared']
-data_color = '#1f1f1f'
-fit_color = 'blue'
+
+groups = ['M_i', 'M_ii', 'M_iii']
+
+# Color palette across groups
+colors = plt.cm.tab10(np.linspace(0, 1, len(groups)))
+group_color_map = dict(zip(groups, colors))
+# Marker shapes across groups
+markers = ['o', 's', '^', 'D', 'v', 'p', '*', 'h', 'X', 'P']
+group_marker_map = dict(zip(groups, markers[:len(groups)]))
+line_styles = ['-', '--', '-.', ':']
 
 def fmt_sci(val):
     if np.isinf(val) or np.isnan(val): return "N/A"
@@ -65,7 +72,7 @@ def fmt_sci(val):
 for prefix in data_types:
     ensembles = df['mass_group'].unique()
     fig_grp, axes_grp = plt.subplots(1, len(ensembles), figsize=(18, 6), sharey=False)
-    fig_grp.suptitle(f'Dimensionless ST Fits - {prefix.capitalize()} Data ($A=A_{{{A_latex[A_index]}}}$)', fontsize=18, fontweight='bold', y=1.02)
+    fig_grp.suptitle(f'ST Fits - {prefix.capitalize()} Data ($A=A_{{{A_latex[A_index]}}}$)', fontsize=18, fontweight='bold', y=1.02)
     
     for ax_grp, group in zip(axes_grp, ensembles):
         subset = df[df['mass_group'] == group]
@@ -90,68 +97,55 @@ for prefix in data_types:
         x_vals_plot = np.linspace(x_min - x_pad, x_max + x_pad, 100)
         
         for axis in [ax, ax_grp]:
-            axis.errorbar(x_arr, y_arr, xerr=x_err_arr, yerr=y_err_arr, fmt='o', color=data_color, alpha=0.9, label='Data', capsize=4, zorder=5) 
+            axis.errorbar(x_arr, y_arr, xerr=x_err_arr, yerr=y_err_arr, fmt=group_marker_map[group], color=group_color_map[group], alpha=0.9, label='Data', capsize=4, zorder=5) 
             axis.set_xlim(x_min - x_pad, x_max + x_pad)
         
         fit_row = fit_df[(fit_df['Ensemble'] == group) & (fit_df['Data_Type'] == prefix)]
         if not fit_row.empty:
-            y0_cen = fit_row.iloc[0]['y_0']
-            cl_cen = fit_row.iloc[0]['c_l']
+            row_data = fit_row.iloc[0]
+            y0_cen = row_data['y_0']
+            cl_cen = row_data['c_l']
+            mu_cen = row_data['mu']
             
-            # Check if c2_l is part of this fit
-            has_c2l = 'c2_l' in fit_row.columns
-            c2l_cen = fit_row.iloc[0]['c2_l'] if has_c2l else 0.0
-            
-            cov_y0_y0, cov_cl_cl, cov_y0_cl = 0, 0, 0
-            cov_c2l_c2l, cov_y0_c2l, cov_cl_c2l = 0, 0, 0
-            
-            try:
-                # Dynamically set function and p0 based on whether we are tracking c2_l
-                if has_c2l:
-                    def fit_func(x, y0, cl, c2l): return model_func_dim(x, y0, cl, c2l)
-                    p0_vals = [y0_cen, cl_cen, c2l_cen]
-                else:
-                    def fit_func(x, y0, cl): return model_func_dim(x, y0, cl, 0.0)
-                    p0_vals = [y0_cen, cl_cen]
-
-                _, pcov = curve_fit(fit_func, x_arr, y_arr, sigma=y_err_arr, absolute_sigma=True, p0=p0_vals)
-                
-                if not np.isinf(pcov).any():
-                    cov_y0_y0, cov_cl_cl, cov_y0_cl = pcov[0,0], pcov[1,1], pcov[0,1]
-                    if has_c2l:
-                        cov_c2l_c2l = pcov[2,2]
-                        cov_y0_c2l = pcov[0,2]
-                        cov_cl_c2l = pcov[1,2]
-            except Exception:
-                pass
-            
-            log_arg = np.maximum((cl_cen**2 * x_vals_plot**2) / (4 * np.pi * mu_dim**2), 1e-15)
-            y_cen = model_func_dim(x_vals_plot, y0_cen, cl_cen, c2l_cen)
-            
-            df_dy0 = 1.0
-            df_dcl = - (cl_cen / np.pi) * x_vals_plot**2 * (gamma_E - np.log(log_arg))
-            df_dc2l = x_vals_plot**2 if has_c2l else 0.0
-            
-            # Expanded variance taking into account all possible covariances
-            variance_y = (
-                (df_dy0**2 * cov_y0_y0) + 
-                (df_dcl**2 * cov_cl_cl) + 
-                (df_dc2l**2 * cov_c2l_c2l) +
-                (2 * df_dy0 * df_dcl * cov_y0_cl) +
-                (2 * df_dy0 * df_dc2l * cov_y0_c2l) +
-                (2 * df_dcl * df_dc2l * cov_cl_c2l)
-            )
-            y_total_err = np.sqrt(np.maximum(variance_y, 0))
-            
-            if has_c2l:
-                eq_label = rf"Fit ($y_0 = {fmt_sci(y0_cen)}$, $|c_l| = {abs(cl_cen):.2f}$, $c_{{2,l}} = {c2l_cen:.2f}$)"
+            if LQCD:
+                c2l_cen = row_data['c2_l']
+                y_cen = model_func2_dim(x_vals_plot, y0_cen, cl_cen, c2l_cen, mu_cen)
+                eq_label = rf"Fit ($y_0 = {fmt_sci(y0_cen)}$, $c_1 = {cl_cen:.2f}$, $c_2 = {c2l_cen:.2f}$, $\mu = {mu_cen:.3f}$)"
             else:
-                eq_label = rf"Fit ($y_0 = {fmt_sci(y0_cen)}$, $|c_l| = {abs(cl_cen):.2f}$)"
-                
+                y_cen = model_func_dim(x_vals_plot, y0_cen, cl_cen, mu_cen)
+                eq_label = rf"Fit ($y_0 = {fmt_sci(y0_cen)}$, $c_l = {cl_cen:.2f}$, $\mu = {mu_cen:.3f}$)"
+
+            # Plot fitting curve directly from CSV parameter values
             for axis in [ax, ax_grp]:
-                axis.plot(x_vals_plot, y_cen, linestyle='-', color=fit_color, label=eq_label)
-                if not np.all(y_total_err == 0):
-                    axis.fill_between(x_vals_plot, y_cen - y_total_err, y_cen + y_total_err, color=fit_color, alpha=0.25)
+                axis.plot(x_vals_plot, y_cen, linestyle='-', color='#003366', lw=2, label=eq_label, zorder=5)
+
+            # --- OPTIONAL: Plot Error Band using pre-computed pcov from CSV ---
+            if 'pcov' in row_data and pd.notna(row_data['pcov']):
+                # Parses matrix string e.g. "[[1.2, 0.1], [0.1, 0.5]]"
+                pcov = np.array(ast.literal_eval(str(row_data['pcov'])))
+                
+                if LQCD:
+                    z = cl_cen * x_vals_plot + c2l_cen
+                    log_arg = np.maximum((z**2) / (4 * np.pi * mu_cen**2), 1e-15)
+                    df_dp = np.array([
+                        np.ones_like(x_vals_plot),
+                        - (z * x_vals_plot / np.pi) * (gamma_E - np.log(log_arg)),
+                        - (z / np.pi) * (gamma_E - np.log(log_arg)),
+                        - (z**2) / (np.pi * mu_cen)
+                    ])
+                else:
+                    log_arg = np.maximum((cl_cen**2 * x_vals_plot**2) / (4 * np.pi * mu_cen**2), 1e-15)
+                    df_dp = np.array([
+                        np.ones_like(x_vals_plot),
+                        - (cl_cen * x_vals_plot**2 / np.pi) * (gamma_E - np.log(log_arg)),
+                        - (cl_cen**2 * x_vals_plot**2) / (np.pi * mu_cen)
+                    ])
+
+                variance_y = np.einsum('ik,ij,jk->k', df_dp, pcov, df_dp)
+                y_total_err = np.sqrt(np.maximum(variance_y, 0))
+
+                for axis in [ax, ax_grp]:
+                    axis.fill_between(x_vals_plot, y_cen - y_total_err, y_cen + y_total_err, color='#003366', alpha=0.2, zorder=3)
 
         for axis in [ax, ax_grp]:
             axis.tick_params(direction='in', top=True, right=True, bottom=True, left=True, length=6)
