@@ -11,6 +11,11 @@ from scipy.stats import chi2
 import json
 
 # --- Constants ---
+# Fix seed for reproducibility
+np.random.seed(42)
+results = []
+N_MC = 1000
+
 hbar_c = 197.3269804 # MeV*fm
 r0_fm = 0.4547
 r0_fm_err = 0.0064
@@ -21,7 +26,7 @@ A_types = ['Ar0', 'Api12']
 # Change index to select r0 or pi12 data
 A_index = 0
 
-N_MC = 1000  # Number of Monte Carlo samples
+
 
 data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/data_bram_{A_types[A_index]}.csv'
 filename = f'fit_results_linear_MC_{A_types[A_index]}.csv'
@@ -62,7 +67,6 @@ df = pd.read_csv(data_file, sep=r'\s+')
 df['mass_group'] = df['Ensemble'].apply(lambda x: "_".join(x.split('_')[-2:])) 
 ensembles = df['mass_group'].unique()
 
-results = []
 data_types = ['bare', 'smeared']
 
 for group in ensembles:

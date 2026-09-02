@@ -10,6 +10,11 @@ from scipy.stats import chi2
 import json
 
 # --- Constants ---
+# Fix seed for reproducibility
+np.random.seed(42)
+results = []
+N_MC = 1000
+
 hbar_c = 197.3269804 # MeV*fm
 r0_fm = 0.4547
 r0_fm_err = 0.0064
@@ -20,7 +25,7 @@ A_types = ['Ar0', 'Api12']
 # Change index to select r0 or pi12 data
 A_index = 1
 
-N_MC = 1000  # Number of Monte Carlo samples
+
 
 data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/data_bram_{A_types[A_index]}.csv'
 filename = f'fit_results_linear_global_MC_{A_types[A_index]}.csv'
@@ -60,7 +65,7 @@ def model_func(x_data, y_0, L_prime_val):
 df = pd.read_csv(data_file, sep=r'\s+')
 df['mass_group'] = df['Ensemble'].apply(lambda x: 'M_iii' if 'M_iii' in x else ('M_ii' if 'M_ii' in x else 'M_i'))
 
-results = []
+
 data_types = ['bare', 'smeared']
 
 for prefix in data_types:

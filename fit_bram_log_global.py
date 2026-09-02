@@ -12,6 +12,11 @@ from scipy.stats import chi2
 # =============================================================================
 # 1. Constants & Parameter Sets
 # =============================================================================
+# Fix seed for reproducibility
+np.random.seed(42)
+fit_results = []
+N_boot = 1000 
+
 hbar_c = 197.3269804 
 r0_fm = 0.4547
 r0_fm_err = 0.0064
@@ -81,8 +86,7 @@ def chiral_model_universal_dim(x, y_0, L2, L_prime, c_pipi, B0_dim, f_pi_dim, mu
 df = pd.read_csv(data_file, sep=r'\s+')
 
 data_types = ['bare', 'smeared']
-fit_results = []
-N_boot = 1000 
+
 
 for dtype in data_types:
     # Gather ALL data from all ensembles simultaneously

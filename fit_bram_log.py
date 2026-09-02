@@ -13,6 +13,13 @@ from scipy.stats import chi2
 # =============================================================================
 # 1. Constants & Unit Conversions
 # =============================================================================
+
+# Fix seed for reproducibility
+np.random.seed(42)
+fit_results = []
+N_boot = 1000
+
+
 hbar_c = 197.3269804 # MeV*fm
 r0_fm = 0.4547
 r0_fm_err = 0.0064
@@ -108,9 +115,6 @@ df['mass_group'] = df['Ensemble'].apply(get_ensemble_group)
 
 groups = ['M_i', 'M_ii', 'M_iii']
 data_types = ['bare', 'smeared']
-
-fit_results = []
-N_boot = 1000
 
 # =============================================================================
 # 5. Fitting Routine (Monte Carlo Loop)
