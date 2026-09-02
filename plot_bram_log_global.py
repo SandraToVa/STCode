@@ -31,7 +31,7 @@ A_types = ['Ar0', 'Api12']
 A_latex = ['r_0','\\pi/12']
 A_index = 1
 
-data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/Code/Data/data_bram_{A_types[A_index]}.csv'
+data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/data_bram_{A_types[A_index]}.csv'
 filename = f'fit_results_log_global_{A_types[A_index]}.csv'
 
 df = pd.read_csv(data_file, sep=r'\s+')

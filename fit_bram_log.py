@@ -25,7 +25,7 @@ mu_MeV = 200
 A_types = ['Ar0', 'Api12']
 A_index = 0
 
-data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/Code/Data/data_bram_{A_types[A_index]}.csv'
+data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/data_bram_{A_types[A_index]}.csv'
 filename = f'fit_results_log_{A_types[A_index]}.csv'
 
 # =============================================================================

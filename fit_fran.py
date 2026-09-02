@@ -4,6 +4,7 @@ from scipy.optimize import curve_fit
 from scipy.stats import chi2
 
 
+
 def mu_l(m_pi, m_k):
     """Definition of the quark mass parameter in 2403.00754"""
     return 3 * m_pi**2 / (m_pi**2 + 2 * m_k**2)
@@ -21,8 +22,11 @@ ensembles = ["D200", "N200", "N203"]
 m_pi_ens = {'D200': 200, 'N200': 280, 'N203': 340}
 m_k_ens = {'D200': 480, 'N200': 460, 'N203': 440}
 
+data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/sbdata_Francesco/best_sigma_fit.csv'
+
 try:
-    df = pd.read_csv('best_sigma_fit.csv').set_index('Ensemble')
+
+    df = pd.read_csv(data_file).set_index('Ensemble')
 
     x_data = []
     y_data = []

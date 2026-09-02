@@ -23,7 +23,7 @@ A_index = 0
 # Flag LQCD
 LQCD = True  # Canvia a True per carregar els resultats de fit_results_ST_full_...
 
-data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/Code/Data/data_bram_{A_types[A_index]}.csv'
+data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/data_bram_{A_types[A_index]}.csv'
 
 # Selecció dinàmica del nom de fitxer segons la variable LQCD
 lqcd_str = "_full" if LQCD else ""

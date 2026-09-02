@@ -25,7 +25,7 @@ A_types = ['Ar0', 'Api12']
 A_index = 1
 LQCD = True  # Posa-ho a False per usar el model original, o True pel nou model (amb c2_l).
 
-data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/Code/Data/data_bram_{A_types[A_index]}.csv'
+data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/data_bram_{A_types[A_index]}.csv'
 # Selecció dinàmica del nom de fitxer segons la variable LQCD
 lqcd_str = "_full" if LQCD else ""
 filename = f'fit_results_ST{lqcd_str}_{A_types[A_index]}.csv'

@@ -26,7 +26,7 @@ A_index = 1
 # Flag LQCD
 LQCD = True  # Set to True to load the full fit results
 
-data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/Code/Data/data_bram_{A_types[A_index]}.csv'
+data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/data_bram_{A_types[A_index]}.csv'
 
 # Selecció dinàmica del nom de fitxer segons la variable LQCD
 lqcd_str = "_full" if LQCD else ""
