@@ -12,7 +12,7 @@ mpl.rcParams['mathtext.fontset'] = 'stix'
 
 A_types = ['Ar0', 'Api12']
 A_latex = ['r_0','\\pi/12']
-A_index = 1
+A_index = 0
 
 data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/data_bram_{A_types[A_index]}.csv'
 filename = f'fit_results_linear_global_{A_types[A_index]}.csv'
@@ -36,8 +36,15 @@ def calculate_dimensionless(df_row, prefix):
 
 data_types = ['bare', 'smeared']
 groups = df['mass_group'].unique()
-data_color = '#1f1f1f'
-branch_colors = {'positive': 'blue', 'negative': 'red'}
+
+# Use the same data and fit palette as plot_bram_linear.py
+colors = plt.cm.tab10(np.linspace(0, 1, len(groups)))
+group_color_map = dict(zip(groups, colors))
+markers = ['o', 's', '^', 'D', 'v', 'p', '*', 'h', 'X', 'P']
+group_marker_map = dict(zip(groups, markers[:len(groups)]))
+branch_colors = {'positive': '#003366', 'negative': '#3B82C4'}
+line_styles = ['-', '--', '-.', ':']
+branch_line_styles = {'positive': line_styles[0], 'negative': line_styles[1]}
 
 def fmt_sci(val):
     if np.isinf(val) or np.isnan(val): return "N/A"
@@ -59,7 +66,7 @@ for prefix in data_types:
             ax = fig.add_subplot(gs[1, i], sharey=zoom_axes[0])
         zoom_axes.append(ax)
     
-    fig.suptitle(f'Global Dimensionless Linear Fit - {prefix.capitalize()} Data ($A=A_{{{A_latex[A_index]}}}$)', fontsize=20, fontweight='bold', y=0.95)
+    fig.suptitle(f'Global Linear Fit - {prefix.capitalize()} Data ($A=A_{{{A_latex[A_index]}}}$)', fontsize=20, fontweight='bold', y=0.95)
     
     phys_data_all = df.apply(lambda row: calculate_dimensionless(row, prefix), axis=1)
     df['x_calc'], df['x_err'] = [d[0] for d in phys_data_all], [d[1] for d in phys_data_all]
@@ -73,7 +80,15 @@ for prefix in data_types:
     x_vals_main = np.linspace(x_min_main - x_pad_main, x_max_main + x_pad_main, 500)
     ax_main.set_xlim(x_min_main - x_pad_main, x_max_main + x_pad_main)
     
-    ax_main.errorbar(df['x_calc'], df['y_calc'], xerr=df['x_err'], yerr=df['y_err'], fmt='o', color=data_color, alpha=0.9, capsize=4, label='Data', zorder=5)
+    for group in groups:
+        subset = df[df['mass_group'] == group]
+        if subset.empty: continue
+        ax_main.errorbar(
+            subset['x_calc'], subset['y_calc'],
+            xerr=subset['x_err'], yerr=subset['y_err'],
+            fmt=group_marker_map[group], color=group_color_map[group],
+            alpha=0.9, capsize=4, label=f'Ensemble ({group})', zorder=5
+        )
 
     if not dtype_fits.empty:
         for _, fit_row in dtype_fits.iterrows():
@@ -86,10 +101,11 @@ for prefix in data_types:
             y_total_err = np.ones_like(x_vals_main) * y0_err
             
             c = branch_colors.get(branch, 'green')
+            line_style = branch_line_styles.get(branch, line_styles[0])
             eq_label = rf"{branch.capitalize()} Universal Fit ($y_0 = {fmt_sci(y0_cen)}$)"
-            ax_main.plot(x_vals_main, y_cen, linestyle='-', color=c, label=eq_label)
+            ax_main.plot(x_vals_main, y_cen, linestyle=line_style, color=c, label=eq_label, lw=2, zorder=5)
             if not np.all(y_total_err == 0):
-                ax_main.fill_between(x_vals_main, y_cen - y_total_err, y_cen + y_total_err, color=c, alpha=0.25)
+                ax_main.fill_between(x_vals_main, y_cen - y_total_err, y_cen + y_total_err, color=c, alpha=0.2, zorder=3)
 
     ax_main.tick_params(direction='in', top=True, right=True, bottom=True, left=True, length=6)
     ax_main.ticklabel_format(style='sci', axis='y', scilimits=(0,0), useMathText=True)
@@ -108,7 +124,12 @@ for prefix in data_types:
         x_vals_z = np.linspace(x_min_z - x_pad_z, x_max_z + x_pad_z, 100)
         ax_z.set_xlim(x_min_z - x_pad_z, x_max_z + x_pad_z)
         
-        ax_z.errorbar(subset['x_calc'], subset['y_calc'], xerr=subset['x_err'], yerr=subset['y_err'], fmt='o', color=data_color, alpha=0.9, capsize=4, zorder=5)
+        ax_z.errorbar(
+            subset['x_calc'], subset['y_calc'],
+            xerr=subset['x_err'], yerr=subset['y_err'],
+            fmt=group_marker_map[group], color=group_color_map[group],
+            alpha=0.9, capsize=4, zorder=5
+        )
         
         if not dtype_fits.empty:
             for _, fit_row in dtype_fits.iterrows():
@@ -121,9 +142,10 @@ for prefix in data_types:
                 y_total_err_z = np.ones_like(x_vals_z) * y0_err
                 
                 c = branch_colors.get(branch, 'green')
-                ax_z.plot(x_vals_z, y_cen_z, linestyle='-', color=c)
+                line_style = branch_line_styles.get(branch, line_styles[0])
+                ax_z.plot(x_vals_z, y_cen_z, linestyle=line_style, color=c, lw=2, zorder=5)
                 if not np.all(y_total_err_z == 0):
-                    ax_z.fill_between(x_vals_z, y_cen_z - y_total_err_z, y_cen_z + y_total_err_z, color=c, alpha=0.25)
+                    ax_z.fill_between(x_vals_z, y_cen_z - y_total_err_z, y_cen_z + y_total_err_z, color=c, alpha=0.2, zorder=3)
 
         ax_z.tick_params(direction='in', top=True, right=True, bottom=True, left=True, length=6)
         ax_z.ticklabel_format(style='sci', axis='y', scilimits=(0,0), useMathText=True)

@@ -11,7 +11,7 @@ mpl.rcParams['mathtext.fontset'] = 'stix'
 
 A_types = ['Ar0', 'Api12']
 A_latex = ['r_0','\\pi/12']
-A_index = 1
+A_index = 0
 
 data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/data_bram_{A_types[A_index]}.csv'
 filename = f'fit_results_linear_{A_types[A_index]}.csv'
@@ -34,9 +34,19 @@ def calculate_dimensionless(df_row, prefix):
     return x, x_err, y, y_err
 
 data_types = ['bare', 'smeared']
-data_color = '#1f1f1f'
+
+groups = ['M_i', 'M_ii', 'M_iii']
+
+# Color palette across groups
+colors = plt.cm.tab10(np.linspace(0, 1, len(groups)))
+group_color_map = dict(zip(groups, colors))
+# Marker shapes across groups
+markers = ['o', 's', '^', 'D', 'v', 'p', '*', 'h', 'X', 'P']
+group_marker_map = dict(zip(groups, markers[:len(groups)]))
 # Colors for the two fit branches
-branch_colors = {'positive': 'blue', 'negative': 'red'}
+branch_colors = {'positive': '#003366', 'negative': '#3B82C4'}
+line_styles = ['-', '--', '-.', ':']
+branch_line_styles = {'positive': line_styles[0], 'negative': line_styles[1]}
 
 def fmt_sci(val):
     if np.isinf(val) or np.isnan(val): return "N/A"
@@ -47,7 +57,7 @@ def fmt_sci(val):
 for prefix in data_types:
     ensembles = df['mass_group'].unique()
     fig_grp, axes_grp = plt.subplots(1, len(ensembles), figsize=(18, 6), sharey=True)
-    fig_grp.suptitle(f'Dimensionless Linear Fits - {prefix.capitalize()} Data ($A=A_{{{A_latex[A_index]}}}$)', fontsize=18, fontweight='bold', y=1.02)
+    fig_grp.suptitle(f'Linear Fits - {prefix.capitalize()} Data ($A=A_{{{A_latex[A_index]}}}$)', fontsize=18, fontweight='bold', y=1.02)
     
     for ax_grp, group in zip(axes_grp, ensembles):
         subset = df[df['mass_group'] == group]
@@ -72,7 +82,7 @@ for prefix in data_types:
         x_vals_plot = np.linspace(x_min - x_pad, x_max + x_pad, 100)
         
         for axis in [ax, ax_grp]:
-            axis.errorbar(x_arr, y_arr, xerr=x_err_arr, yerr=y_err_arr, fmt='o', color=data_color, alpha=0.9, label='Data', capsize=4, zorder=5) 
+            axis.errorbar(x_arr, y_arr, xerr=x_err_arr, yerr=y_err_arr, fmt=group_marker_map[group], color=group_color_map[group], alpha=0.9, label='Data', capsize=4, zorder=5) 
             axis.set_xlim(x_min - x_pad, x_max + x_pad)
         
         # Iterate over all fits for this ensemble and data type (positive & negative branches)
@@ -92,11 +102,12 @@ for prefix in data_types:
             
             eq_label = rf"{branch.capitalize()} Fit ($y_0 = {fmt_sci(y0_cen)}$)"
             c = branch_colors.get(branch, 'green')
+            line_style = branch_line_styles.get(branch, line_styles[0])
             
             for axis in [ax, ax_grp]:
-                axis.plot(x_vals_plot, y_cen, linestyle='-', color=c, label=eq_label)
+                axis.plot(x_vals_plot, y_cen, linestyle=line_style, color=c, label=eq_label, lw=2, zorder=5)
                 if not np.all(y_total_err == 0):
-                    axis.fill_between(x_vals_plot, y_cen - y_total_err, y_cen + y_total_err, color=c, alpha=0.25)
+                    axis.fill_between(x_vals_plot, y_cen - y_total_err, y_cen + y_total_err, color=c, alpha=0.2, zorder=3)
 
         for axis in [ax, ax_grp]:
             axis.tick_params(direction='in', top=True, right=True, bottom=True, left=True, length=6)

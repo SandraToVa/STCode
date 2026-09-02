@@ -25,15 +25,15 @@ mu_dim_central = mu_MeV * r0_MeV_central
 
 # Branch configurations
 param_sets = {
-    'Branch_1': {'means': [0.00978833, 0.0262025, -0.124474], 'color': 'blue'},
-    'Branch_2': {'means': [-0.0458536, 0.0815424, -0.124023], 'color': 'red'},
-    'Branch_3': {'means': [0.0458536, -0.0815424, 0.124023], 'color': 'green'},
-    'Branch_4': {'means': [-0.00978833, -0.0262025, 0.124474], 'color': 'purple'}
+    'Branch_1': {'means': [0.00978833, 0.0262025, -0.124474], 'color': '#003366'},
+    'Branch_2': {'means': [-0.0458536, 0.0815424, -0.124023], 'color': '#1D5288'},
+    'Branch_3': {'means': [0.0458536, -0.0815424, 0.124023], 'color': '#437BB5'},
+    'Branch_4': {'means': [-0.00978833, -0.0262025, 0.124474], 'color': '#8CB2E2'}
 }
 
 A_types = ['Ar0', 'Api12']
 A_latex = ['r_0','\\pi/12']
-A_index = 1
+A_index = 0
 
 data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/data_bram_{A_types[A_index]}.csv'
 filename = f'fit_results_log_{A_types[A_index]}.csv'
@@ -64,7 +64,22 @@ def chiral_model_dim(x, y_0, L2, L_prime, c_pipi):
     return y_0 - term1 - term2 - term3
 
 data_types = ['bare', 'smeared']
-data_color = '#1f1f1f'
+
+groups = ['M_i', 'M_ii', 'M_iii']
+
+# Color palette across groups
+colors = plt.cm.tab10(np.linspace(0, 1, len(groups)))
+group_color_map = dict(zip(groups, colors))
+# Marker shapes across groups
+markers = ['o', 's', '^', 'D', 'v', 'p', '*', 'h', 'X', 'P']
+group_marker_map = dict(zip(groups, markers[:len(groups)]))
+# Colorblind-safe blue gradients anchored at #003366
+fit_colors = {
+    1: ['#003366'],
+    2: ['#003366', '#3B82C4'],
+    3: [None, '#003366', '#1D5288', '#437BB5', '#8CB2E2']
+}
+line_styles = ['-', '--', '-.', ':']
 
 def fmt_sci(val):
     if np.isinf(val) or np.isnan(val): return "N/A"
@@ -73,7 +88,7 @@ def fmt_sci(val):
     return f"{float(base):.2f} \\times 10^{{{int(exp)}}}"
 
 for prefix in data_types:
-    ensembles = [g for g in ['M_i', 'M_ii', 'M_iii'] if g in df['mass_group'].unique()]
+    ensembles = [g for g in groups if g in df['mass_group'].unique()]
     fig_grp, axes_grp = plt.subplots(1, len(ensembles), figsize=(18, 6), sharey=True)
     if len(ensembles) == 1: axes_grp = [axes_grp]
     
@@ -100,7 +115,7 @@ for prefix in data_types:
         x_vals_plot = np.linspace(x_min - x_pad, x_max + x_pad, 100)
         
         for axis in [ax, ax_grp]:
-            axis.errorbar(x_arr, y_arr, xerr=x_err_arr, yerr=y_err_arr, fmt='o', color=data_color, alpha=0.9, label='Data', capsize=4, zorder=5) 
+            axis.errorbar(x_arr, y_arr, xerr=x_err_arr, yerr=y_err_arr, fmt=group_marker_map[group], color=group_color_map[group], alpha=0.9, label=f'({group})', capsize=4, zorder=5) 
             axis.set_xlim(x_min - x_pad, x_max + x_pad)
         
         group_fits = fit_df[(fit_df['Ensemble'] == group) & (fit_df['Data_Type'] == prefix)]
@@ -117,7 +132,9 @@ for prefix in data_types:
             means = param_sets[branch]['means']
             c_pipi_cen = (means[0] + means[1]/2) / 2
             L_prime_cen = 2 * B0_MeV * means[2] * r0_MeV_central
-            c = param_sets[branch]['color']
+            branch_index = int(branch.rsplit('_', 1)[1])
+            c = fit_colors[3][branch_index]
+            line_style = line_styles[branch_index - 1]
             
             # Central evaluation
             y_cen = chiral_model_dim(x_vals_plot, y0_cen, L2_cen, L_prime_cen, c_pipi_cen)
@@ -130,9 +147,9 @@ for prefix in data_types:
             
             eq_label = rf"{branch.replace('_', ' ')} ($y_0 = {fmt_sci(y0_cen)}$, $\lambda'' = {fmt_sci(L2_cen)}$)"
             for axis in [ax, ax_grp]:
-                axis.plot(x_vals_plot, y_cen, linestyle='-', color=c, label=eq_label)
+                axis.plot(x_vals_plot, y_cen, linestyle=line_style, color=c, lw=2, label=eq_label, zorder=5)
                 if not np.all(y_total_err == 0):
-                    axis.fill_between(x_vals_plot, y_cen - y_total_err, y_cen + y_total_err, color=c, alpha=0.2)
+                    axis.fill_between(x_vals_plot, y_cen - y_total_err, y_cen + y_total_err, color=c, alpha=0.2, zorder=3)
 
         for axis in [ax, ax_grp]:
             axis.tick_params(direction='in', top=True, right=True, bottom=True, left=True, length=6)
