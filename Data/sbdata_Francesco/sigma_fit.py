@@ -1,3 +1,7 @@
+# Evaluates the linear regime of the V_2 potential after the string breaking. 
+# Fits this linear function to finc the corresponding string tension (sigma) for each ensemble (D200, N200, N203) creating file "result_sigma_fit.csv" with the results of the fits for different r_min values.
+# Obtain the best fit for each ensemble by selecting the one with Chi2/dof closest to 1 creating file "best_sigma_fit.csv" with the best fits for each ensemble.
+
 import os
 import numpy as np
 import pandas as pd

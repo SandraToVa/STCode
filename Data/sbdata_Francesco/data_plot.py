@@ -1,3 +1,6 @@
+# Plots the shapes of the potentials V0, V1, and V2 for different ensembles (D200, N200, N203) from the data files.
+# Simply a visualization script.
+
 import numpy as np
 import matplotlib.pyplot as plt
 import os

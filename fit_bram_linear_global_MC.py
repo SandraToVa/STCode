@@ -23,7 +23,7 @@ A_index = 1
 N_MC = 1000  # Number of Monte Carlo samples
 
 data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/data_bram_{A_types[A_index]}.csv'
-filename = f'fit_results_linear_global_{A_types[A_index]}.csv'
+filename = f'fit_results_linear_global_MC_{A_types[A_index]}.csv'
 
 # Defined branches
 branches = {
