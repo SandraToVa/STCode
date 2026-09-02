@@ -1,0 +1,11 @@
+# fm units
+r0 = 0.475  
+# For each ensemble \beta number M i, I have:
+## the value of m1 = mass of the light quark, a*m1
+## the value of r0/a
+## the avlue of a^2*sigma
+# Knowing r0 we can obtain the a for each ensemble and finally m1 and sigma
+
+# B0 is nore or less 2.7 GeV
+# Hence lamda'/2B0 has to be written in fm 
+# Then this sigma = - 4 lambda' m1 can be plotted

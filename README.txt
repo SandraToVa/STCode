@@ -1,0 +1,5 @@
+What has been done in the folder "Dimensional fits" is not necessarily bad. However we see a reduced chi squarde values too low without overfitting therefore we are overestimation our errors. The cause of this is doing the fit with the dimensionfull parameters. By computing m_l and sigma using the values of r0 and a we are propagating their error to the fits and it becomes a mess. The proper way of proceeding is to do a dimensionless analysis and then obtain the meaningful parameters from it after doing the fit. With this a much reasonable value for the reduced chi squared is expected.
+
+We have 2 data sets: Brambilla and Francesco
+- The Brambilla data is direct and we can apply the codes to it straightforward. There should be no correlation between the data and an individual and also a global fits for different models should be good. 
+- Francesco's data is yet to be extracted. By using their files one must perfom a linear fit to the last part of the potential V2 and extract the sigma for each m_l. After that we will proceed with the analysis.
