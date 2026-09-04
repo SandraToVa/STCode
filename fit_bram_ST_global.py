@@ -16,18 +16,19 @@ import json
 hbar_c = 197.3269804 # MeV*fm
 r0_fm = 0.4547
 r0_MeV = r0_fm / hbar_c
-gamma_E = np.euler_gamma
 
 A_types = ['Ar0', 'Api12']
 A_index = 0
-LQCD = False 
+LQCD = True
 # Define lower and upper limits matching parameter order: [y_0, c_l, c2_l, mu]
 lower_bounds1 = [-np.inf, -np.inf, 1e-15]
 upper_bounds1 = [ np.inf,  np.inf, np.inf]
 bounds1 = (lower_bounds1, upper_bounds1)
-# Replace -400.0 with 0.0 or -200.0 depending on whether c2_l can be negative.
-lower_bounds2 = [-np.inf, -np.inf, -400.0, 1e-15]
-upper_bounds2 = [ np.inf,  np.inf,  400.0, np.inf]
+# c2_l can be negative but curve_fit only accepts one-sided bounds
+# First we work with positive numbers and look at the chi^2/dof and p-value to see if the fit is reasonable.
+# Then we do the same for negative numbers and compare the results.
+lower_bounds2 = [-np.inf, -np.inf, 200.0, 1e-15]
+upper_bounds2 = [ np.inf,  np.inf,  600.0, np.inf]
 bounds2 = (lower_bounds2, upper_bounds2)
 
 
@@ -54,24 +55,18 @@ def calculate_dimensionless(df_row, prefix):
     
     return x, x_err, y, y_err
 
-def model_func_dim(x, y_0, c_l, mu):
-    log_arg = (c_l**2 * x**2) / (4 * np.pi * mu**2)
-    log_arg = np.maximum(log_arg, 1e-15) 
+def model_func_dim(x, y_0, c_l, gamma):
+    term1 = (c_l**2 / (2 * np.pi)) * x**2 * np.log(x**2)
+    term2 = gamma * x**2
     
-    term1 = (c_l**2 / (2 * np.pi)) * x**2
-    term2 = 1 + gamma_E - np.log(log_arg)
-    
-    return y_0 - term1 * term2
+    return y_0 + term1 * term2
 
-def model_func2_dim(x, y_0, c_l, c2_l, mu):
-    z = c_l * x + c2_l
-    log_arg = (z**2) / (4 * np.pi * mu**2)
-    log_arg = np.maximum(log_arg, 1e-15) 
+def model_func2_dim(x, y_0, c_l, c2_l, gamma):
+    z = x + c_l/c2_l
+    term1 = (c_l**2 / (2 * np.pi)) * z**2 * np.log(z**2)
+    term2 = gamma * z**2
     
-    term1 = (1 / (2 * np.pi)) * z**2
-    term2 = 1 + gamma_E - np.log(log_arg)
-    
-    return y_0 - term1 * term2
+    return y_0 + term1 * term2
 
 # =============================================================================
 # 3. Load Data
@@ -80,7 +75,7 @@ df = pd.read_csv(data_file, sep=r'\s+')
 results = []
 data_types = ['bare', 'smeared']
 
-mu_guess_init = 200
+
 
 # =============================================================================
 # 4. Fitting Routine (Global)
@@ -107,33 +102,33 @@ for prefix in data_types:
             popt_init, _ = curve_fit(
                 model_func_dim, x_arr, y_arr, 
                 sigma=y_err_arr, absolute_sigma=True, maxfev=10000,
-                p0=[np.mean(y_arr), 1.0, mu_guess_init], bounds=bounds1
+                p0=[np.mean(y_arr), 1.0, 1.0], bounds=bounds1
             )
             c_l_guess = popt_init[1]
-            mu_guess = popt_init[2]
+            gamma_guess = popt_init[2]
         except:
             c_l_guess = 1.0
-            mu_guess = mu_guess_init
-            
-        def effective_y_err(c_l_est, mu_est):
-            log_arg = (c_l_est**2 * x_arr**2) / (4 * np.pi * mu_est**2)
-            log_arg = np.maximum(log_arg, 1e-15)
-            
-            df_dx = - (c_l_est**2 / np.pi) * x_arr * (gamma_E - np.log(log_arg))
+            gamma_guess = 1.0
+
+        def effective_y_err(c_l_est, gamma_est):
+            log_arg = x_arr**2
+            log_arg = np.maximum(log_arg, 1e-15) 
+            df_dx = 2 * gamma_est * x_arr + (c_l_est**2 / np.pi) * x_arr * (1 + np.log(log_arg))
             return np.sqrt(y_err_arr**2 + (df_dx * x_err_arr)**2)
+        
 
         try:
             popt, pcov = curve_fit(
                 model_func_dim, x_arr, y_arr, 
-                sigma=effective_y_err(c_l_guess, mu_guess), absolute_sigma=True, maxfev=10000, bounds=bounds1
+                sigma=effective_y_err(c_l_guess, gamma_guess), absolute_sigma=True, maxfev=10000, bounds=bounds1
             )
 
             res_dict['y_0'] = popt[0]
             res_dict['y_0_err'] = np.sqrt(np.diag(pcov))[0]
             res_dict['c_l'] = popt[1]
             res_dict['c_l_err'] = np.sqrt(np.diag(pcov))[1]
-            res_dict['mu'] = popt[2]
-            res_dict['mu_err'] = np.sqrt(np.diag(pcov))[2]
+            res_dict['gamma'] = popt[2]
+            res_dict['gamma_err'] = np.sqrt(np.diag(pcov))[2]
             res_dict['pcov'] = json.dumps(pcov.tolist())
             res_dict['x_min'] = float(np.min(x_arr))
             res_dict['x_max'] = float(np.max(x_arr))
@@ -154,25 +149,26 @@ for prefix in data_types:
             popt_init, _ = curve_fit(
                 model_func2_dim, x_arr, y_arr, 
                 sigma=y_err_arr, absolute_sigma=True, maxfev=10000,
-                p0=[np.mean(y_arr), 1.0, 0.0, mu_guess_init],
+                p0=[np.mean(y_arr), 1.0, 200.0, 1.0],
                 bounds=bounds2
             )
-            c_l_guess, c2_l_guess, mu_guess = popt_init[1], popt_init[2], popt_init[3]
+            c_l_guess, c2_l_guess, gamma_guess = popt_init[1], popt_init[2], popt_init[3]
         except:
-            c_l_guess, c2_l_guess, mu_guess = 1.0, 0.0, mu_guess_init
+            c_l_guess, c2_l_guess, gamma_guess = 1.0, 200.0, 1.0
             
-        def effective_y_err2(c_l_est, c2_l_est, mu_est):
-            z = c_l_est * x_arr + c2_l_est
-            log_arg = (z**2) / (4 * np.pi * mu_est**2)
+        def effective_y_err2(c_l_est, c2_l_est, gamma_est):
+            z = x_arr + c2_l_est/c_l_est
+            log_arg = (z**2) 
             log_arg = np.maximum(log_arg, 1e-15) 
-            
-            df_dx = - (z * c_l_est / np.pi) * (gamma_E - np.log(log_arg))
+                
+            df_dx = z * (2 * gamma_est + (c_l_est**2 / np.pi) * (1 + np.log(log_arg)))
             return np.sqrt(y_err_arr**2 + (df_dx * x_err_arr)**2)
+
 
         try:
             popt, pcov = curve_fit(
                 model_func2_dim, x_arr, y_arr, 
-                sigma=effective_y_err2(c_l_guess, c2_l_guess, mu_guess), absolute_sigma=True, maxfev=10000, bounds=bounds2
+                sigma=effective_y_err2(c_l_guess, c2_l_guess, gamma_guess), absolute_sigma=True, maxfev=10000, bounds=bounds2
             )
             res_dict['y_0'] = popt[0]
             res_dict['y_0_err'] = np.sqrt(np.diag(pcov))[0]
@@ -180,8 +176,8 @@ for prefix in data_types:
             res_dict['c_l_err'] = np.sqrt(np.diag(pcov))[1]
             res_dict['c2_l'] = popt[2]
             res_dict['c2_l_err'] = np.sqrt(np.diag(pcov))[2]
-            res_dict['mu'] = popt[3]
-            res_dict['mu_err'] = np.sqrt(np.diag(pcov))[3]
+            res_dict['gamma'] = popt[3]
+            res_dict['gamma_err'] = np.sqrt(np.diag(pcov))[3]
             res_dict['pcov'] = json.dumps(pcov.tolist())
             res_dict['x_min'] = float(np.min(x_arr))
             res_dict['x_max'] = float(np.max(x_arr))
@@ -213,6 +209,6 @@ print("\nSummary of Extracted Parameters (y_0 = r0^2 * sigma_0):")
 cols_to_print = ['Data_Type', 'y_0', 'c_l']
 if LQCD:
     cols_to_print.append('c2_l')
-cols_to_print.extend(['mu', 'red_chi_sq', 'p_value'])
+cols_to_print.extend(['gamma', 'red_chi_sq', 'p_value'])
 
 print(results_df[cols_to_print].to_string(index=False))
