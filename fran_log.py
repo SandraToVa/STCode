@@ -12,12 +12,12 @@ A_index = 0  # Set manually (0 or 1)
 a_fm = 0.0633          # Lattice spacing parameter
 hbar_c = 197.3269804 
 a = a_fm / hbar_c  # Lattice spacing in MeV^-1
-B0 = 2700 #MeV 
-f_pi = 92 #MeV
-l3_bar = 1.8
-sigma0 = -0.3
-m_k_bar = 485.0 #MeV
-mu_scale = 200  # Renormalization scale \mu MeV
+B0 = 2700          # ChPT constant B_0 MeV
+f_pi = 92       # Pion decay constant MeV
+L3 = 600      # Lambda_3 \sim 0.6 GeV
+ck = 0.4     # Scalar parameter ck, can vary between 0.4, 0.5, 0.6
+m_k_bar = 485.0   # Reference Kaon mass \bar{m}_K MeV
+mu_MeV = 200
 
 data_file = '/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/sbdata_Francesco/best_sigma_fit.csv'
 log_fit_file = f'fit_results_log_global_{A_types[A_index]}.csv'
@@ -48,12 +48,13 @@ df_log = pd.read_csv(log_fit_file)
 
 def log_model(mu, y0, L_prime, L2, c_pipi):
     A = -4 * L_prime * a * (m_k_bar**2) / (3 * B0)
-    B = -4 * L_prime * a * (m_k_bar**2) / (9 * B0) * ((m_k_bar**2 * l3_bar) / (16 * np.pi**2 * f_pi**2) + 1.0 - 4.0 * sigma0) \
-        - 2 * L2 * (a**2) * (m_k_bar**4) / (9 * B0**2)
-    C = - (a**2 * m_k_bar**4) / (12 * np.pi**2 * f_pi**2 * B0) * (4 * B0 * c_pipi - L_prime)
-    
-    log_term = np.log((2 * a * m_k_bar**2 * mu) / (3 * mu_scale**2)) - 1.0
-    return y0 + A * mu + B * (mu**2) + C * (mu**2) * log_term
+    C = - (a**2 * m_k_bar**4) / (12 * np.pi**2 * f_pi**2 * B0) * (4 * B0 * c_pipi - L_prime) \
+        + (L_prime * a * (m_k_bar**4))/ (36 * np.pi**2 * f_pi**2 * B0)
+    B = -4 * L_prime * a * (m_k_bar**2) * (1+ck) / (9 * B0)  - 2 * L2 * (a**2) * (m_k_bar**4) / (9 * B0**2) \
+        - (a**2 * m_k_bar**4) / (12 * np.pi**2 * f_pi**2 * B0) * (4 * B0 * c_pipi - L_prime) * ( np.log(2 * a * m_k_bar**2 / (3 * mu_MeV**2)) -1 ) \
+        + (L_prime * a * (m_k_bar**4))/ (36 * np.pi**2 * f_pi**2 * B0) * np.log(2 *  m_k_bar**2 / (3 * L3**2)) 
+
+    return y0 + A * mu + B * (mu**2) + C * (mu**2) * np.log(mu)
 
 # --- Plotting ---
 plt.figure(figsize=(8, 6))

@@ -13,8 +13,8 @@ hbar_c = 197.3269804
 a = a_fm / hbar_c  # Lattice spacing in MeV^-1
 B0 = 2700          # ChPT constant B_0 MeV
 f_pi = 92       # Pion decay constant MeV
-l3_bar = 1.8      # Low-energy constant \bar{l}_3
-sigma0 = -0.3     # Scalar parameter \sigma_0
+L3 = 600      # Lambda_3 \sim 0.6 GeV
+ck = 0.4     # Scalar parameter ck, can vary between 0.4, 0.5, 0.6
 m_k_bar = 485.0   # Reference Kaon mass \bar{m}_K MeV
 
 data_file = '/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/sbdata_Francesco/best_sigma_fit.csv'
@@ -41,9 +41,17 @@ y_data = np.array(y_data)
 y_err = np.array(y_err)
 
 # --- Define Model Function ---
+
+def func_C(A):
+    return - A * m_k_bar**2 / (48 * np.pi**2 * f_pi**2)
+
+def func_B(A,C):
+    return (A/3) * (1 + ck) + func_C(A) * np.log(2 * m_k_bar**2  / (3 * L3**2))
+
 def linear_model(mu, y0, A):
-    B = (A/3) * (m_k_bar**2 * l3_bar) / (16 * np.pi**2 * f_pi**2) + 1.0 - 4.0 * sigma0
-    return y0 + A * mu + B * (mu**2)
+    C = func_C(A)
+    B = func_B(A, C)
+    return y0 + A * mu + B * (mu**2) + C * (mu**2) * np.log(mu)
 
 # --- Perform Fit ---
 popt, pcov = curve_fit(linear_model, x_data, y_data, sigma=y_err, absolute_sigma=True, p0=[1.0, 0.1])
@@ -54,7 +62,7 @@ perr = np.sqrt(np.diag(pcov))
 res = y_data - linear_model(x_data, *popt)
 chi2 = np.sum((res / y_err)**2)
 dof = len(x_data) - len(popt)
-print(f"Fit Results:\n  y0 = {y0_fit:.6f} +/- {perr[0]:.6f}\n  A = {A_fit:.6f} +/- {perr[1]:.6f}")
+print(f"Fit Results:\n  y0 = {y0_fit:.6f} +/- {perr[0]:.6f}\n  A = {A_fit:.6f} +/- {perr[1]:.6f}\n B = {func_B(A_fit, func_C(A_fit)):.6f}\n C = {func_C(A_fit):.6f}")
 print(f"  chi2/dof = {chi2:.4f} / {dof}")
 
 # --- Plotting ---
