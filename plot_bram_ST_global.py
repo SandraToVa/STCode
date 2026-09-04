@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.gridspec as gridspec
+import ast  # To parse matrix strings from CSV if needed
 
 # Aesthetics
 mpl.rcParams['svg.fonttype'] = 'none'
@@ -16,14 +17,13 @@ mpl.rcParams['mathtext.fontset'] = 'stix'
 hbar_c = 197.3269804
 r0_fm = 0.4547
 r0_MeV = r0_fm / hbar_c
-mu_dim = np.sqrt(210) * r0_MeV  
-gamma_E = np.euler_gamma  
+  
 
 A_types = ['Ar0', 'Api12']
 A_latex = ['r_0', '\\pi/12']
-A_index = 0  
+A_index = 0 
 
-LQCD = False  
+LQCD =  False
 
 # File Paths
 data_file = f'Data/data_bram_{A_types[A_index]}.csv'
@@ -52,28 +52,20 @@ def calculate_dimensionless(df_row, prefix):
     x_err = x * (r0_a_err / r0_a)
     return x, x_err, y, y_err
 
-def model_func_dim(x, y_0, c_l, c2_l=0.0):
-    log_arg = np.maximum((c_l**2 * x**2) / (4 * np.pi * mu_dim**2), 1e-15)
-    term1 = (c_l**2 / (2 * np.pi)) * (x**2)
-    term2 = 1 + gamma_E - np.log(log_arg)
-    return y_0 - term1 * term2 + c2_l * (x**2)
+# Model functions
+def model_func_dim(x, y_0, c_l, gamma):
+    term1 = (c_l**2 / (2 * np.pi)) * x**2 * np.log(x**2)
+    term2 = gamma * x**2
+    
+    return y_0 + term1 * term2
 
-def predict_global_fit(x_vals, y0, cl, c2l, cov):
-    """Calculates y_pred and uncertainty bands via Jacobian covariance propagation."""
-    y_pred = model_func_dim(x_vals, y0, cl, c2l)
+def model_func2_dim(x, y_0, c_l, c2_l, gamma):
+    z = x + c_l/c2_l
+    term1 = (c_l**2 / (2 * np.pi)) * z**2 * np.log(z**2)
+    term2 = gamma * z**2
     
-    log_arg = np.maximum((cl**2 * x_vals**2) / (4 * np.pi * mu_dim**2), 1e-15)
-    
-    # Partial derivatives
-    df_dy0 = np.ones_like(x_vals)
-    df_dcl = - (cl / np.pi) * (x_vals**2) * (gamma_E - np.log(log_arg))
-    df_dc2l = x_vals**2
-    
-    J = np.array([df_dy0, df_dcl, df_dc2l])  # Shape (3, N)
-    var_y = np.einsum('ik,ij,jk->k', J, cov, J)
-    y_err = np.sqrt(np.maximum(var_y, 0))
-    
-    return y_pred, y_err
+    return y_0 + term1 * term2
+
 
 def fmt_sci(val):
     if np.isinf(val) or np.isnan(val): return "N/A"
@@ -123,31 +115,48 @@ for prefix in data_types:
         fit_row = dtype_fits.iloc[0]
         y0_cen = fit_row['y_0']
         cl_cen = fit_row['c_l']
-        c2l_cen = fit_row['c2_l'] if 'c2_l' in fit_row else 0.0
+        gamma_cen = fit_row['gamma']
         
-        # Build Covariance Matrix directly from fit results CSV
-        cov = np.zeros((3, 3))
-        cov[0, 0] = fit_row.get('y_0_err', 0.0)**2
-        cov[1, 1] = fit_row.get('c_l_err', 0.0)**2
-        cov[2, 2] = fit_row.get('c2_l_err', 0.0)**2
-        
-        cov[0, 1] = cov[1, 0] = fit_row.get('cov_y0_cl', 0.0)
-        cov[0, 2] = cov[2, 0] = fit_row.get('cov_y0_c2l', 0.0)
-        cov[1, 2] = cov[2, 1] = fit_row.get('cov_cl_c2l', 0.0)
         
         x_min_main, x_max_main = min(df['x_calc']), max(df['x_calc'])
         x_pad = (x_max_main - x_min_main) * 0.05
         x_vals_main = np.linspace(x_min_main - x_pad, x_max_main + x_pad, 500)
         
-        y_cen, y_err = predict_global_fit(x_vals_main, y0_cen, cl_cen, c2l_cen, cov)
-        
-        c2_str = f", $c_{{2,l}} = {c2l_cen:.3f}$" if 'c2_l' in fit_row else ""
-        eq_label = rf"Global Fit ($y_0 = {fmt_sci(y0_cen)}$, $c_l = {cl_cen:.3f}${c2_str})"
+
+        if LQCD:
+            c2l_cen = fit_row['c2_l']
+            y_cen = model_func2_dim(x_vals_main, y0_cen, cl_cen, c2l_cen, gamma_cen)
+            eq_label = rf"Fit ($y_0 = {fmt_sci(y0_cen)}$, $c_1 = {cl_cen:.2f}$, $c_2 = {c2l_cen:.2f}$, $\gamma = {gamma_cen:.3f}$)"
+        else:
+            y_cen = model_func_dim(x_vals_main, y0_cen, cl_cen, gamma_cen)
+            eq_label = rf"Fit ($y_0 = {fmt_sci(y0_cen)}$, $c_l = {cl_cen:.2f}$, $\gamma = {gamma_cen:.3f}$)"
         
         ax_main.plot(x_vals_main, y_cen, linestyle='-', color='#003366', lw=2, label=eq_label, zorder=5)
-        if not np.all(y_err == 0):
-            ax_main.fill_between(x_vals_main, y_cen - y_err, y_cen + y_err, color='#003366', alpha=0.2, zorder=3)
-            
+        
+        # --- OPTIONAL: Plot Error Band using pre-computed pcov from CSV ---
+        if 'pcov' in fit_row and pd.notna(fit_row['pcov']):
+            pcov = np.array(ast.literal_eval(str(fit_row['pcov'])))
+                        
+            if LQCD:
+                z = x_vals_main + c2l_cen/cl_cen
+                df_dp = np.array([
+                    np.ones_like(x_vals_main),
+                    (z * (cl_cen**3 * x_vals_main * np.log(z**2) - c2l_cen * (cl_cen**2 + 2 * gamma_cen * np.pi))) / (cl_cen**2 * np.pi),
+                    (z * (cl_cen**2 * np.log(z**2) + cl_cen**2 + 2 * gamma_cen * np.pi)) / (cl_cen * np.pi),
+                    (z**2)
+                ])
+            else:
+                df_dp = np.array([
+                    np.ones_like(x_vals_main),
+                    (cl_cen / np.pi) * x_vals_main**2 * np.log(x_vals_main**2),
+                    2 * x_vals_main**2
+                ])
+        
+            variance_y = np.einsum('ik,ij,jk->k', df_dp, pcov, df_dp)
+            y_total_err = np.sqrt(np.maximum(variance_y, 0))
+
+            ax_main.fill_between(x_vals_main, y_cen - y_total_err, y_cen + y_total_err, color='#003366', alpha=0.2, zorder=3)
+        
         ax_main.set_xlim(x_min_main - x_pad, x_max_main + x_pad)
 
     ax_main.set_title('Global Overview', fontsize=15)
@@ -175,11 +184,40 @@ for prefix in data_types:
         )
         
         if not dtype_fits.empty:
-            y_cen_z, y_err_z = predict_global_fit(x_vals_z, y0_cen, cl_cen, c2l_cen, cov)
-            ax_z.plot(x_vals_z, y_cen_z, linestyle='-', color='#003366', lw=1.8, zorder=5)
-            if not np.all(y_err_z == 0):
-                ax_z.fill_between(x_vals_z, y_cen_z - y_err_z, y_cen_z + y_err_z, color='#003366', alpha=0.2, zorder=3)
+            if LQCD:
+                c2l_cen = fit_row['c2_l']
+                y_cen = model_func2_dim(x_vals_main, y0_cen, cl_cen, c2l_cen, gamma_cen)
+            else:
+                y_cen = model_func_dim(x_vals_main, y0_cen, cl_cen, gamma_cen)
+            
+            ax_z.plot(x_vals_main, y_cen, linestyle='-', color='#003366', lw=2, zorder=5)
         
+            # --- OPTIONAL: Plot Error Band using pre-computed pcov from CSV ---
+            if 'pcov' in fit_row and pd.notna(fit_row['pcov']):
+                pcov = np.array(ast.literal_eval(str(fit_row['pcov'])))
+                        
+                if LQCD:
+                    z = x_vals_main + c2l_cen/cl_cen
+                    df_dp = np.array([
+                        np.ones_like(x_vals_main),
+                        (z * (cl_cen**3 * x_vals_main * np.log(z**2) - c2l_cen * (cl_cen**2 + 2 * gamma_cen * np.pi))) / (cl_cen**2 * np.pi),
+                        (z * (cl_cen**2 * np.log(z**2) + cl_cen**2 + 2 * gamma_cen * np.pi)) / (cl_cen * np.pi),
+                        (z**2)
+                    ])
+                else:
+                    df_dp = np.array([
+                        np.ones_like(x_vals_main),
+                        (cl_cen / np.pi) * x_vals_main**2 * np.log(x_vals_main**2),
+                        2 * x_vals_main**2
+                    ])
+        
+                variance_y = np.einsum('ik,ij,jk->k', df_dp, pcov, df_dp)
+                y_total_err = np.sqrt(np.maximum(variance_y, 0))
+
+                ax_z.fill_between(x_vals_main, y_cen - y_total_err, y_cen + y_total_err, color='#003366', alpha=0.2, zorder=3)
+        
+        ax_main.set_xlim(x_min_main - x_pad, x_max_main + x_pad)
+
         ax_z.set_xlim(x_min_z - x_pad_z, x_max_z + x_pad_z)
         ax_z.tick_params(direction='in', top=True, right=True, bottom=True, left=True, length=5)
         ax_z.ticklabel_format(style='sci', axis='y', scilimits=(0,0), useMathText=True)

@@ -14,12 +14,12 @@ mpl.rcParams['mathtext.fontset'] = 'stix'
 hbar_c = 197.3269804
 r0_fm = 0.4547
 r0_MeV = r0_fm / hbar_c
-gamma_E = np.euler_gamma  
+
 
 A_types = ['Ar0', 'Api12']
 A_latex = ['r_0', '\\pi/12']
 A_index = 0
-LQCD = False
+LQCD = True
 
 data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/data_bram_{A_types[A_index]}.csv'
 lqcd_str = "_full" if LQCD else ""
@@ -43,14 +43,18 @@ def calculate_dimensionless(df_row, prefix):
     return x, x_err, y, y_err
 
 # Model functions
-def model_func_dim(x, y_0, c_l, mu):
-    log_arg = np.maximum((c_l**2 * x**2) / (4 * np.pi * mu**2), 1e-15)
-    return y_0 - ((c_l**2 / (2 * np.pi)) * x**2) * (1 + gamma_E - np.log(log_arg))
+def model_func_dim(x, y_0, c_l, gamma):
+    term1 = (c_l**2 / (2 * np.pi)) * x**2 * np.log(x**2)
+    term2 = gamma * x**2
+    
+    return y_0 + term1 * term2
 
-def model_func2_dim(x, y_0, c_l, c2_l, mu):
-    z = c_l * x + c2_l
-    log_arg = np.maximum((z**2) / (4 * np.pi * mu**2), 1e-15)
-    return y_0 - ((1 / (2 * np.pi)) * z**2) * (1 + gamma_E - np.log(log_arg))
+def model_func2_dim(x, y_0, c_l, c2_l, gamma):
+    z = x + c_l/c2_l
+    term1 = (c_l**2 / (2 * np.pi)) * z**2 * np.log(z**2)
+    term2 = gamma * z**2
+    
+    return y_0 + term1 * term2
 
 data_types = ['bare', 'smeared']
 
@@ -105,15 +109,15 @@ for prefix in data_types:
             row_data = fit_row.iloc[0]
             y0_cen = row_data['y_0']
             cl_cen = row_data['c_l']
-            mu_cen = row_data['mu']
+            gamma_cen = row_data['gamma']
             
             if LQCD:
                 c2l_cen = row_data['c2_l']
-                y_cen = model_func2_dim(x_vals_plot, y0_cen, cl_cen, c2l_cen, mu_cen)
-                eq_label = rf"Fit ($y_0 = {fmt_sci(y0_cen)}$, $c_1 = {cl_cen:.2f}$, $c_2 = {c2l_cen:.2f}$, $\mu = {mu_cen:.3f}$)"
+                y_cen = model_func2_dim(x_vals_plot, y0_cen, cl_cen, c2l_cen, gamma_cen)
+                eq_label = rf"Fit ($y_0 = {fmt_sci(y0_cen)}$, $c_1 = {cl_cen:.2f}$, $c_2 = {c2l_cen:.2f}$, $\gamma = {gamma_cen:.3f}$)"
             else:
-                y_cen = model_func_dim(x_vals_plot, y0_cen, cl_cen, mu_cen)
-                eq_label = rf"Fit ($y_0 = {fmt_sci(y0_cen)}$, $c_l = {cl_cen:.2f}$, $\mu = {mu_cen:.3f}$)"
+                y_cen = model_func_dim(x_vals_plot, y0_cen, cl_cen, gamma_cen)
+                eq_label = rf"Fit ($y_0 = {fmt_sci(y0_cen)}$, $c_l = {cl_cen:.2f}$, $\gamma = {gamma_cen:.3f}$)"
 
             # Plot fitting curve directly from CSV parameter values
             for axis in [ax, ax_grp]:
@@ -121,24 +125,21 @@ for prefix in data_types:
 
             # --- OPTIONAL: Plot Error Band using pre-computed pcov from CSV ---
             if 'pcov' in row_data and pd.notna(row_data['pcov']):
-                # Parses matrix string e.g. "[[1.2, 0.1], [0.1, 0.5]]"
                 pcov = np.array(ast.literal_eval(str(row_data['pcov'])))
                 
                 if LQCD:
-                    z = cl_cen * x_vals_plot + c2l_cen
-                    log_arg = np.maximum((z**2) / (4 * np.pi * mu_cen**2), 1e-15)
+                    z = x_vals_plot + c2l_cen/cl_cen
                     df_dp = np.array([
                         np.ones_like(x_vals_plot),
-                        - (z * x_vals_plot / np.pi) * (gamma_E - np.log(log_arg)),
-                        - (z / np.pi) * (gamma_E - np.log(log_arg)),
-                        - (z**2) / (np.pi * mu_cen)
+                        (z * (cl_cen**3 * x_vals_plot * np.log(z**2) - c2l_cen * (cl_cen**2 + 2 * gamma_cen * np.pi))) / (cl_cen**2 * np.pi),
+                        (z * (cl_cen**2 * np.log(z**2) + cl_cen**2 + 2 * gamma_cen * np.pi)) / (cl_cen * np.pi),
+                        (z**2)
                     ])
                 else:
-                    log_arg = np.maximum((cl_cen**2 * x_vals_plot**2) / (4 * np.pi * mu_cen**2), 1e-15)
                     df_dp = np.array([
                         np.ones_like(x_vals_plot),
-                        - (cl_cen * x_vals_plot**2 / np.pi) * (gamma_E - np.log(log_arg)),
-                        - (cl_cen**2 * x_vals_plot**2) / (np.pi * mu_cen)
+                        (cl_cen / np.pi) * x_vals_plot**2 * np.log(x_vals_plot**2),
+                        2 * x_vals_plot**2
                     ])
 
                 variance_y = np.einsum('ik,ij,jk->k', df_dp, pcov, df_dp)
