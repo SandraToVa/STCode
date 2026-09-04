@@ -95,7 +95,8 @@ for prefix in data_types:
         zoom_axes.append(ax)
     
     fig.suptitle(f'Global Log Fit - {prefix.capitalize()} Data ($A=A_{{{A_latex[A_index]}}}$)', fontsize=20, fontweight='bold', y=0.95)
-    
+
+    # Plotting the data points with error bars
     phys_data_all = df.apply(lambda row: calculate_dimensionless(row, prefix), axis=1)
     df['x_calc'], df['x_err'] = [d[0] for d in phys_data_all], [d[1] for d in phys_data_all]
     df['y_calc'], df['y_err'] = [d[2] for d in phys_data_all], [d[3] for d in phys_data_all]
