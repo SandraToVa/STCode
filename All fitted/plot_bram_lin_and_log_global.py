@@ -27,13 +27,13 @@ mu_dim_central = 200 * r0_MeV_central
 
 A_types = ['Ar0', 'Api12']
 A_latex = ['r_0', '\\pi/12']
-fit_types = ['linear', 'logarithmic']
+fit_types = ['Linear', 'Logarithmic']
 
 # Selection Settings
-A_index = 1  # 0 for Ar0, 1 for Api12
-fit_index = 1  # 0 for linear global, 1 for logarithmic global
+A_index =  0 # 0 for Ar0, 1 for Api12
+fit_index = 0  # 0 for linear global, 1 for logarithmic global
 
-data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/Code/Data/data_bram_{A_types[A_index]}.csv'
+data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/data_bram_{A_types[A_index]}.csv'
 filename = f'fit_results_full_global_{fit_types[fit_index]}_{A_types[A_index]}.csv'
 
 df = pd.read_csv(data_file, sep=r'\s+')
@@ -55,30 +55,36 @@ def calculate_dimensionless(df_row, prefix):
   return x, x_err, y, y_err
 
 
-def eval_model(x_vals, fit_row):
-  y0 = fit_row['y0_central']
-  L_prime = fit_row['L_prime_central']
+def linear_model(x, y0, L_prime):
+  return y0 - 4 * L_prime * x
 
-  if fit_index == 0:  # Linear
-    return y0 - 4 * L_prime * x_vals
-
-  # Logarithmic
-  L2 = fit_row['L2_central']
-  c_pipi = fit_row['c_pipi_central']
-
-  term1 = 4 * L_prime * x_vals
+def log_model(x, y0, L2, L_prime, c_pipi):
+  term1 = 4 * L_prime * x
   log_arg = np.maximum(
-      (2 * B0_dim_central * x_vals) / (mu_dim_central**2), 1e-10
-  )
+        (2 * B0_dim_central * x) / (mu_dim_central**2), 1e-10
+    )
   term2_coeff = (3 * B0_dim_central) / (4 * np.pi**2 * f_pi_dim_central**2)
   term2 = (
       term2_coeff
       * (4 * B0_dim_central * c_pipi - L_prime)
       * (np.log(log_arg) - 1)
-      * (x_vals**2)
-  )
-  term3 = 2 * L2 * (x_vals**2)
+      * (x**2)
+    )
+  term3 = 2 * L2 * (x**2)
   return y0 - term1 - term2 - term3
+
+def eval_model(x_vals, fit_row):
+  y0 = fit_row['y0_central']
+  L_prime = fit_row['L_prime_central']
+
+  if fit_index == 0:  # Linear
+    return linear_model(x_vals, y0, L_prime)
+
+  # Logarithmic
+  L2 = fit_row['L2_central']
+  c_pipi = fit_row['c_pipi_central']
+
+  return log_model(x_vals, y0, L2, L_prime, c_pipi)
 
 
 def fmt_sci(val):
@@ -95,8 +101,14 @@ def fmt_sci(val):
 
 data_types = ['bare', 'smeared']
 groups = df['mass_group'].unique()
-data_color = '#1f1f1f'
-fit_color = '#0055ff'
+
+# Color palette across groups
+colors = plt.cm.tab10(np.linspace(0, 1, len(groups)))
+group_color_map = dict(zip(groups, colors))
+markers = ['o', 's', '^', 'D', 'v', 'p', '*', 'h', 'X', 'P']
+group_marker_map = dict(zip(groups, markers[:len(groups)]))
+
+fit_color ='#003366'
 
 for prefix in data_types:
   fig = plt.figure(figsize=(18, 12))
@@ -114,7 +126,7 @@ for prefix in data_types:
     zoom_axes.append(ax)
 
   fig.suptitle(
-      f'Global Dimensionless {fit_types[fit_index].capitalize()} Fit -'
+      f' Full Global {fit_types[fit_index].capitalize()} Fit -'
       f' {prefix.capitalize()} Data ($A=A_{{{A_latex[A_index]}}}$)',
       fontsize=20,
       fontweight='bold',
@@ -133,7 +145,7 @@ for prefix in data_types:
 
   dtype_fits = fit_df[fit_df['Data_Type'] == prefix]
 
-  ax_main.set_title('Global Overview', fontsize=16)
+  #ax_main.set_title('Global Overview', fontsize=16)
   x_min_main, x_max_main = df['x_calc'].min(), df['x_calc'].max()
   x_pad_main = (x_max_main - x_min_main) * 0.05
   x_vals_main = np.linspace(
@@ -141,44 +153,61 @@ for prefix in data_types:
   )
   ax_main.set_xlim(x_min_main - x_pad_main, x_max_main + x_pad_main)
 
-  ax_main.errorbar(
+  for group in groups:
+    subset = df[df['mass_group'] == group]
+    if subset.empty: continue
+    ax_main.errorbar(
       df['x_calc'],
       df['y_calc'],
       xerr=df['x_err'],
       yerr=df['y_err'],
-      fmt='o',
-      color=data_color,
+      fmt=group_marker_map[group],
+      color=group_color_map[group],
       alpha=0.9,
       capsize=4,
-      label='Data',
+      label=f'Ensemble: {group}',
       zorder=5,
-  )
+    )
 
   if not dtype_fits.empty:
     for _, fit_row in dtype_fits.iterrows():
       y0_cen = fit_row['y0_central']
-      y0_err = fit_row['y0_total_err']
       L_prime_cen = fit_row['L_prime_central']
+      y0_list = json.loads(fit_row['y0_tot_list'])
+      L_prime_list = json.loads(fit_row['L_prime_tot_list'])
 
       y_cen = eval_model(x_vals_main, fit_row)
-      y_total_err = np.ones_like(x_vals_main) * y0_err
 
       if fit_index == 0:  # Linear
+        # Reconstruct error band from JSON bootstrap parameters
+        y_band_samples = []
+        for y0_s, L_prime_s in zip(y0_list, L_prime_list):
+          y_band_samples.append(linear_model(x_vals_main, y0_s, L_prime_cen))
+        y_total_err = np.std(y_band_samples, axis=0)
+        
         eq_label = (
-            rf'Global Fit ($y_0 = {fmt_sci(y0_cen)}$, $L^\prime ='
-            rf' {fmt_sci(L_prime_cen)}$)'
+            rf'$y_0 = {y0_cen:.2f}$, $\lambda^\prime ='
+            rf' {L_prime_cen:.2f}$'
         )
       else:  # Logarithmic
         L2_cen = fit_row['L2_central']
         c_pipi_cen = fit_row['c_pipi_central']
+        L2_list = json.loads(fit_row['L2_tot_list'])
+        c_pipi_list = json.loads(fit_row['c_pipi_tot_list'])
+        
+        # Reconstruct error band from JSON bootstrap parameters
+        y_band_samples = []
+        for y0_s, L_prime_s, L2_s, c_pipi_s in zip(y0_list, L_prime_list, L2_list, c_pipi_list):
+          y_band_samples.append(log_model(x_vals_main, y0_cen, L2_s, L_prime_cen, c_pipi_s))
+        y_total_err = np.std(y_band_samples, axis=0)
+        
         eq_label = (
-            rf'Global Fit ($y_0 = {fmt_sci(y0_cen)}$, $L^\prime ='
-            rf' {fmt_sci(L_prime_cen)}$, $L_2 = {fmt_sci(L2_cen)}$,'
-            rf' $c_{{\pi\pi}} = {fmt_sci(c_pipi_cen)}$)'
+          rf'$y_0 = {y0_cen:.2f}$, $\lambda^\prime = {L_prime_cen:.2f}$,' '\n'
+          rf'$\lambda^{{\prime \prime}} = {fmt_sci(L2_cen)}$, $c={{\pi\pi}} = {fmt_sci(c_pipi_cen)}$'
         )
 
       ax_main.plot(
-          x_vals_main, y_cen, linestyle='-', color=fit_color, label=eq_label
+          x_vals_main, y_cen, linestyle='-', color=fit_color, label=eq_label, zorder=5
       )
       if not np.all(np.isnan(y_total_err)):
         ax_main.fill_between(
@@ -186,7 +215,8 @@ for prefix in data_types:
             y_cen - y_total_err,
             y_cen + y_total_err,
             color=fit_color,
-            alpha=0.25,
+            alpha=0.2,
+            zorder=3,
         )
 
   ax_main.tick_params(
@@ -218,8 +248,8 @@ for prefix in data_types:
         subset['y_calc'],
         xerr=subset['x_err'],
         yerr=subset['y_err'],
-        fmt='o',
-        color=data_color,
+        fmt=group_marker_map[group],
+        color=group_color_map[group],
         alpha=0.9,
         capsize=4,
         zorder=5,
@@ -233,14 +263,15 @@ for prefix in data_types:
         y_cen_z = eval_model(x_vals_z, fit_row)
         y_total_err_z = np.ones_like(x_vals_z) * y0_err
 
-        ax_z.plot(x_vals_z, y_cen_z, linestyle='-', color=fit_color)
+        ax_z.plot(x_vals_z, y_cen_z, linestyle='-', color=fit_color, zorder=5)
         if not np.all(np.isnan(y_total_err_z)):
           ax_z.fill_between(
               x_vals_z,
               y_cen_z - y_total_err_z,
               y_cen_z + y_total_err_z,
               color=fit_color,
-              alpha=0.25,
+              alpha=0.2,
+              zorder=3
           )
 
     ax_z.tick_params(
@@ -254,7 +285,7 @@ for prefix in data_types:
       ax_z.set_ylabel(r'$y = \sigma r_0^2$', fontsize=14)
 
   fig.savefig(
-      f'Plot_{fit_types[fit_index].capitalize()}_Global_{prefix}_{A_types[A_index]}.svg',
+      f'Plot_{fit_types[fit_index].capitalize()}_full_global_{prefix}_{A_types[A_index]}.svg',
       bbox_inches='tight',
   )
   plt.close(fig)
