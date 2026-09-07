@@ -19,7 +19,7 @@ r0_MeV = r0_fm / hbar_c
 
 A_types = ['Ar0', 'Api12']
 A_index = 0
-LQCD = True
+LQCD = False
 # Define lower and upper limits matching parameter order: [y_0, c_l, c2_l, gamma]
 lower_bounds1 = [-np.inf, -np.inf, 1e-15]
 upper_bounds1 = [ np.inf,  np.inf, np.inf]

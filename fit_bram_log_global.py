@@ -28,7 +28,7 @@ mu_MeV = 200
 
 A_types = ['Ar0', 'Api12']
 # Change index to select r0 or pi12 data
-A_index = 1
+A_index = 0
 
 data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/data_bram_{A_types[A_index]}.csv'
 filename = f'fit_results_log_global_{A_types[A_index]}.csv'

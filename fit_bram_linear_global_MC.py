@@ -23,7 +23,7 @@ B0_MeV = 2700
 
 A_types = ['Ar0', 'Api12']
 # Change index to select r0 or pi12 data
-A_index = 1
+A_index = 0
 
 
 
