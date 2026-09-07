@@ -13,6 +13,10 @@ import json
 # =============================================================================
 # 1. Constants & Unit Conversions
 # =============================================================================
+
+# Fix seed for reproducibility
+np.random.seed(42)
+
 hbar_c = 197.3269804 # MeV*fm
 r0_fm = 0.4547
 r0_fm_err = 0.0064
@@ -25,13 +29,13 @@ mu_MeV = 200
 A_types = ['Ar0', 'Api12']
 fit_types = ['linear', 'logarithmic']
 # Change index to select r0 or pi12 data
-A_index = 1
+A_index = 0
 fit_index = 1  # 0 for linear, 1 for logarithmic
 
 # Number of Monte Carlo iterations for error propagation
 N_MC = 1000
 
-data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/Code/Data/data_bram_{A_types[A_index]}.csv'
+data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/data_bram_{A_types[A_index]}.csv'
 filename = f'fit_results_full_{fit_types[fit_index]}_{A_types[A_index]}.csv'
 
 # =============================================================================
