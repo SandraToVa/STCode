@@ -1,3 +1,6 @@
+
+# STILL OUTDATED
+
 # Script to plot a figure comparing the goodness of fit 
 # (Full Linear vs Full Logarithmic models), 
 # either globally or ensemble by ensemble.
