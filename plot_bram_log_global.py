@@ -94,7 +94,7 @@ for prefix in data_types:
             ax = fig.add_subplot(gs[1, i], sharey=zoom_axes[0])
         zoom_axes.append(ax)
     
-    fig.suptitle(f'Global Log Fit - {prefix.capitalize()} Data ($A=A_{{{A_latex[A_index]}}}$)', fontsize=20, fontweight='bold', y=0.95)
+    fig.suptitle(f'Global Logarithmic Fit - {prefix.capitalize()} Data ($A=A_{{{A_latex[A_index]}}}$)', fontsize=20, fontweight='bold', y=0.95)
 
     # Plotting the data points with error bars
     phys_data_all = df.apply(lambda row: calculate_dimensionless(row, prefix), axis=1)
@@ -103,7 +103,7 @@ for prefix in data_types:
     
     dtype_fits = fit_df[fit_df['Data_Type'] == prefix]
     
-    ax_main.set_title('Global Overview', fontsize=16)
+    #ax_main.set_title('Global Overview', fontsize=16)
     x_min_main, x_max_main = df['x_calc'].min(), df['x_calc'].max()
     x_pad_main = (x_max_main - x_min_main) * 0.05
     x_vals_main = np.linspace(x_min_main - x_pad_main, x_max_main + x_pad_main, 500)
@@ -116,7 +116,7 @@ for prefix in data_types:
             subset['x_calc'], subset['y_calc'],
             xerr=subset['x_err'], yerr=subset['y_err'],
             fmt=group_marker_map[group], color=group_color_map[group],
-            alpha=0.9, capsize=4, label=f'Ensemble ({group})', zorder=5
+            alpha=0.9, capsize=4, label=f'Ensemble: {group}', zorder=5
         )
 
     if not dtype_fits.empty:
@@ -143,7 +143,7 @@ for prefix in data_types:
                 y_band_samples.append(chiral_model_universal_dim(x_vals_main, y0_s, L2_s, Lp_s, cp_s, B0_dim_cen, f_pi_dim_cen, mu_dim_cen))
             y_total_err = np.std(y_band_samples, axis=0)
             
-            eq_label = rf"{branch.replace('_', ' ')} ($y_0 = {fmt_sci(y0_cen)}$, $\lambda'' = {fmt_sci(L2_cen)}$)"
+            eq_label = rf"{branch.replace('_', ' ')} ($y_0 = {y0_cen:.2f}$, $\lambda'' = {L2_cen:.2f}$)"
             branch_index = int(branch.rsplit('_', 1)[1])
             ax_main.plot(x_vals_main, y_cen, linestyle=line_styles[branch_index - 1], color=c_color, label=eq_label)
             if not np.all(y_total_err == 0):

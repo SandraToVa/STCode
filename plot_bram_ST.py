@@ -19,7 +19,7 @@ r0_MeV = r0_fm / hbar_c
 A_types = ['Ar0', 'Api12']
 A_latex = ['r_0', '\\pi/12']
 A_index = 0
-LQCD = True
+LQCD = False
 
 data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/data_bram_{A_types[A_index]}.csv'
 lqcd_str = "_full" if LQCD else ""
@@ -76,7 +76,8 @@ def fmt_sci(val):
 for prefix in data_types:
     ensembles = df['mass_group'].unique()
     fig_grp, axes_grp = plt.subplots(1, len(ensembles), figsize=(18, 6), sharey=False)
-    fig_grp.suptitle(f'ST Fits - {prefix.capitalize()} Data ($A=A_{{{A_latex[A_index]}}}$)', fontsize=18, fontweight='bold', y=1.02)
+    lqcd_title = "Full" if LQCD else ""
+    fig_grp.suptitle(f'{lqcd_title} Soto-Tarrús Fits - {prefix.capitalize()} Data ($A=A_{{{A_latex[A_index]}}}$)', fontsize=18, fontweight='bold', y=1.02)
     
     for ax_grp, group in zip(axes_grp, ensembles):
         subset = df[df['mass_group'] == group]
@@ -114,10 +115,10 @@ for prefix in data_types:
             if LQCD:
                 c2l_cen = row_data['c2_l']
                 y_cen = model_func2_dim(x_vals_plot, y0_cen, cl_cen, c2l_cen, gamma_cen)
-                eq_label = rf"Fit ($y_0 = {fmt_sci(y0_cen)}$, $c_1 = {cl_cen:.2f}$, $c_2 = {c2l_cen:.2f}$, $\gamma = {gamma_cen:.3f}$)"
+                eq_label = rf"$y_0 = {y0_cen:.2f}$, $c_1 = {cl_cen:.2f}$, $c_2 = {c2l_cen:.2f}$, $\gamma = {gamma_cen:.2f}$"
             else:
                 y_cen = model_func_dim(x_vals_plot, y0_cen, cl_cen, gamma_cen)
-                eq_label = rf"Fit ($y_0 = {fmt_sci(y0_cen)}$, $c_l = {cl_cen:.2f}$, $\gamma = {gamma_cen:.3f}$)"
+                eq_label = rf"$y_0 = {y0_cen:.2f}$, $c_l = {cl_cen:.2f}$, $\gamma = {gamma_cen:.2f}$"
 
             # Plot fitting curve directly from CSV parameter values
             for axis in [ax, ax_grp]:

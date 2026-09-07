@@ -92,7 +92,7 @@ for prefix in data_types:
     fig_grp, axes_grp = plt.subplots(1, len(ensembles), figsize=(18, 6), sharey=True)
     if len(ensembles) == 1: axes_grp = [axes_grp]
     
-    fig_grp.suptitle(f'Dimensionless Log Fits - {prefix.capitalize()} Data ($A=A_{{{A_latex[A_index]}}}$)', fontsize=18, fontweight='bold', y=1.02)
+    fig_grp.suptitle(f'Logarithmic Fits - {prefix.capitalize()} Data ($A=A_{{{A_latex[A_index]}}}$)', fontsize=18, fontweight='bold', y=1.02)
     
     for ax_grp, group in zip(axes_grp, ensembles):
         subset = df[df['mass_group'] == group]
@@ -115,7 +115,7 @@ for prefix in data_types:
         x_vals_plot = np.linspace(x_min - x_pad, x_max + x_pad, 100)
         
         for axis in [ax, ax_grp]:
-            axis.errorbar(x_arr, y_arr, xerr=x_err_arr, yerr=y_err_arr, fmt=group_marker_map[group], color=group_color_map[group], alpha=0.9, label=f'({group})', capsize=4, zorder=5) 
+            axis.errorbar(x_arr, y_arr, xerr=x_err_arr, yerr=y_err_arr, fmt=group_marker_map[group], color=group_color_map[group], alpha=0.9, label=f'Data', capsize=4, zorder=5) 
             axis.set_xlim(x_min - x_pad, x_max + x_pad)
         
         group_fits = fit_df[(fit_df['Ensemble'] == group) & (fit_df['Data_Type'] == prefix)]
@@ -145,7 +145,7 @@ for prefix in data_types:
                 y_band_samples.append(chiral_model_dim(x_vals_plot, y0_s, L2_s, L_prime_cen, c_pipi_cen))
             y_total_err = np.std(y_band_samples, axis=0)
             
-            eq_label = rf"{branch.replace('_', ' ')} ($y_0 = {fmt_sci(y0_cen)}$, $\lambda'' = {fmt_sci(L2_cen)}$)"
+            eq_label = rf"{branch.replace('_', ' ')} ($y_0 = {y0_cen:.2f}$, $\lambda'' = {L2_cen:.2f}$)"
             for axis in [ax, ax_grp]:
                 axis.plot(x_vals_plot, y_cen, linestyle=line_style, color=c, lw=2, label=eq_label, zorder=5)
                 if not np.all(y_total_err == 0):

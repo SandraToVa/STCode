@@ -21,7 +21,7 @@ r0_MeV = r0_fm / hbar_c
 
 A_types = ['Ar0', 'Api12']
 A_latex = ['r_0', '\\pi/12']
-A_index = 0 
+A_index = 0
 
 LQCD =  False
 
@@ -87,9 +87,10 @@ for prefix in data_types:
     
     ax_main = fig.add_subplot(gs[0, :])
     zoom_axes = [fig.add_subplot(gs[1, i]) for i in range(len(groups))]
-    
+
+    lqcd_title = "Full" if LQCD else ""
     fig.suptitle(
-        f'Global Dimensionless ST Fit - {prefix.capitalize()} Data ($A=A_{{{A_latex[A_index]}}}$)', 
+        f'{lqcd_title}Global Soto-Tarrús Fit - {prefix.capitalize()} Data ($A=A_{{{A_latex[A_index]}}}$)', 
         fontsize=18, fontweight='bold', y=0.96
     )
     
@@ -107,7 +108,7 @@ for prefix in data_types:
             grp_data['x_calc'], grp_data['y_calc'], 
             xerr=grp_data['x_err'], yerr=grp_data['y_err'], 
             fmt='o', color=group_color_map[group], alpha=0.85, 
-            capsize=3, label=f'Group {group}', zorder=4
+            capsize=3, label=f'Ensamble: {group}', zorder=4
         )
     
     # Global Fit Curve and Band Propagation from fit_df
@@ -126,10 +127,10 @@ for prefix in data_types:
         if LQCD:
             c2l_cen = fit_row['c2_l']
             y_cen = model_func2_dim(x_vals_main, y0_cen, cl_cen, c2l_cen, gamma_cen)
-            eq_label = rf"Fit ($y_0 = {fmt_sci(y0_cen)}$, $c_1 = {cl_cen:.2f}$, $c_2 = {c2l_cen:.2f}$, $\gamma = {gamma_cen:.3f}$)"
+            eq_label = rf"$y_0 = {y0_cen:.2f}$, $c_1 = {cl_cen:.2f}$, $c_2 = {c2l_cen:.2f}$, $\gamma = {gamma_cen:.2f}$"
         else:
             y_cen = model_func_dim(x_vals_main, y0_cen, cl_cen, gamma_cen)
-            eq_label = rf"Fit ($y_0 = {fmt_sci(y0_cen)}$, $c_l = {cl_cen:.2f}$, $\gamma = {gamma_cen:.3f}$)"
+            eq_label = rf"$y_0 = {y0_cen:.2f}$, $c_l = {cl_cen:.2f}$, $\gamma = {gamma_cen:.2f}$"
         
         ax_main.plot(x_vals_main, y_cen, linestyle='-', color='#003366', lw=2, label=eq_label, zorder=5)
         
@@ -159,7 +160,7 @@ for prefix in data_types:
         
         ax_main.set_xlim(x_min_main - x_pad, x_max_main + x_pad)
 
-    ax_main.set_title('Global Overview', fontsize=15)
+    #ax_main.set_title('Global Overview', fontsize=15)
     ax_main.tick_params(direction='in', top=True, right=True, bottom=True, left=True, length=6)
     ax_main.ticklabel_format(style='sci', axis='y', scilimits=(0,0), useMathText=True)
     ax_main.set_ylabel(r'$y = \sigma r_0^2$', fontsize=13)

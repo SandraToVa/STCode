@@ -12,10 +12,10 @@ mpl.rcParams['mathtext.fontset'] = 'stix'
 
 A_types = ['Ar0', 'Api12']
 A_latex = ['r_0','\\pi/12']
-A_index = 0
+A_index = 1
 
 data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/data_bram_{A_types[A_index]}.csv'
-filename = f'fit_results_linear_global_{A_types[A_index]}.csv'
+filename = f'fit_results_linear_global_MC_{A_types[A_index]}.csv'
 
 df = pd.read_csv(data_file, sep=r'\s+')
 df['mass_group'] = df['Ensemble'].apply(lambda s: "_".join(s.split('_')[-2:]))
@@ -74,7 +74,7 @@ for prefix in data_types:
     
     dtype_fits = fit_df[fit_df['Data_Type'] == prefix]
     
-    ax_main.set_title('Global Overview', fontsize=16)
+    #ax_main.set_title('Global Overview', fontsize=16)
     x_min_main, x_max_main = df['x_calc'].min(), df['x_calc'].max()
     x_pad_main = (x_max_main - x_min_main) * 0.05
     x_vals_main = np.linspace(x_min_main - x_pad_main, x_max_main + x_pad_main, 500)
@@ -87,7 +87,7 @@ for prefix in data_types:
             subset['x_calc'], subset['y_calc'],
             xerr=subset['x_err'], yerr=subset['y_err'],
             fmt=group_marker_map[group], color=group_color_map[group],
-            alpha=0.9, capsize=4, label=f'Ensemble ({group})', zorder=5
+            alpha=0.9, capsize=4, label=f'Ensemble: {group}', zorder=5
         )
 
     if not dtype_fits.empty:
@@ -102,7 +102,7 @@ for prefix in data_types:
             
             c = branch_colors.get(branch, 'green')
             line_style = branch_line_styles.get(branch, line_styles[0])
-            eq_label = rf"{branch.capitalize()} Universal Fit ($y_0 = {fmt_sci(y0_cen)}$)"
+            eq_label = rf"{branch.capitalize()} Branch ($y_0 = {{0:.3g}}$)".format(y0_cen)
             ax_main.plot(x_vals_main, y_cen, linestyle=line_style, color=c, label=eq_label, lw=2, zorder=5)
             if not np.all(y_total_err == 0):
                 ax_main.fill_between(x_vals_main, y_cen - y_total_err, y_cen + y_total_err, color=c, alpha=0.2, zorder=3)

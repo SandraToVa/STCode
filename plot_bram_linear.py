@@ -14,7 +14,7 @@ A_latex = ['r_0','\\pi/12']
 A_index = 0
 
 data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/data_bram_{A_types[A_index]}.csv'
-filename = f'fit_results_linear_{A_types[A_index]}.csv'
+filename = f'fit_results_linear_MC_{A_types[A_index]}.csv'
 
 df = pd.read_csv(data_file, sep=r'\s+')
 df['mass_group'] = df['Ensemble'].apply(lambda s: "_".join(s.split('_')[-2:]))
@@ -100,7 +100,7 @@ for prefix in data_types:
             # Simple error band based on intercept uncertainty
             y_total_err = np.ones_like(x_vals_plot) * y0_err 
             
-            eq_label = rf"{branch.capitalize()} Fit ($y_0 = {fmt_sci(y0_cen)}$)"
+            eq_label = rf"{branch.capitalize()} Branch ($y_0 = {{0:.3g}}$)".format(y0_cen)
             c = branch_colors.get(branch, 'green')
             line_style = branch_line_styles.get(branch, line_styles[0])
             
