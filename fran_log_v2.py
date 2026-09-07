@@ -11,9 +11,11 @@ import json
 A_types = ['Ar0', 'Api12']
 A_index = 1  # Set manually (0 or 1)
 
-a_fm = 0.0633          # Lattice spacing parameter
+a_fm = 0.0633 
+a_fm_err = np.sqrt(0.0004**2 + 0.0006**2)         # Lattice spacing parameter
 hbar_c = 197.3269804 
 a = a_fm / hbar_c  # Lattice spacing in MeV^-1
+a_err = a_fm_err / hbar_c  
 B0 = 2700          # ChPT constant B_0 MeV
 f_pi = 92       # Pion decay constant MeV
 L3 = 600      # Lambda_3 \sim 0.6 GeV
@@ -48,13 +50,13 @@ y_err = np.array(y_err)
 # --- Load Log Fit Results ---
 df_log = pd.read_csv(log_fit_file)
 
-def log_model(mu, y0, L_prime, L2, c_pipi):
-    A = -4 * L_prime * a * (m_k_bar**2) / (3 * B0)
-    C = - (a**2 * m_k_bar**4) / (12 * np.pi**2 * f_pi**2 * B0) * (4 * B0 * c_pipi - L_prime) \
-        + (L_prime * a * (m_k_bar**4))/ (36 * np.pi**2 * f_pi**2 * B0)
-    B = -4 * L_prime * a * (m_k_bar**2) * (1+ck) / (9 * B0)  - 2 * L2 * (a**2) * (m_k_bar**4) / (9 * B0**2) \
-        - (a**2 * m_k_bar**4) / (12 * np.pi**2 * f_pi**2 * B0) * (4 * B0 * c_pipi - L_prime) * ( np.log(2 * a * m_k_bar**2 / (3 * mu_MeV**2)) -1 ) \
-        + (L_prime * a * (m_k_bar**4))/ (36 * np.pi**2 * f_pi**2 * B0) * np.log(2 *  m_k_bar**2 / (3 * L3**2)) 
+def log_model(mu, y0, L_prime, L2, c_pipi, a_val=a):
+    A = -4 * L_prime * a_val * (m_k_bar**2) / (3 * B0)
+    C = - (a_val**2 * m_k_bar**4) / (12 * np.pi**2 * f_pi**2 * B0) * (4 * B0 * c_pipi - L_prime) \
+        + (L_prime * a_val * (m_k_bar**4))/ (36 * np.pi**2 * f_pi**2 * B0)
+    B = -4 * L_prime * a_val * (m_k_bar**2) * (1+ck) / (9 * B0) - 2 * L2 * (a_val**2) * (m_k_bar**4) / (9 * B0**2) \
+        - (a_val**2 * m_k_bar**4) / (12 * np.pi**2 * f_pi**2 * B0) * (4 * B0 * c_pipi - L_prime) * ( np.log(2 * a_val * m_k_bar**2 / (3 * mu_MeV**2)) - 1 ) \
+        + (L_prime * a_val * (m_k_bar**4))/ (36 * np.pi**2 * f_pi**2 * B0) * np.log(2 * m_k_bar**2 / (3 * L3**2)) 
 
     return y0 + A * mu + B * (mu**2) + C * (mu**2) * np.log(mu)
 
@@ -96,23 +98,28 @@ for idx, row in df_log.iterrows():
     label_str = f"{dtype} - {branch} ($y_0={y0_fit:.3f}$, $\chi^2_{{red}}={chi2_red:.2f}$)"
     line, = plt.plot(x_fit, y_fit, label=label_str)
 
-    # Propagate the stored bootstrap samples into a pointwise fit band.
+    # Propagate the stored bootstrap samples + lattice spacing error into the error band
     try:
         L_prime_traces = np.asarray(json.loads(row['L_prime_traces']), dtype=float)
         L2_traces = np.asarray(json.loads(row['L2_traces']), dtype=float)
         c_pipi_traces = np.asarray(json.loads(row['c_pipi_traces']), dtype=float)
         n_traces = min(len(L_prime_traces), len(L2_traces), len(c_pipi_traces))
 
+        # Sample 'a' from a Gaussian distribution with mean 'a' and std 'a_err'
+        np.random.seed(42)  # Optional: ensure reproducible random sampling
+        a_samples = np.random.normal(loc=a, scale=a_err, size=n_traces)
+
         y_bootstrap = []
-        for L_prime_s, L2_s, c_pipi_s in zip(
+        for i, (L_prime_s, L2_s, c_pipi_s) in enumerate(zip(
             L_prime_traces[:n_traces],
             L2_traces[:n_traces],
             c_pipi_traces[:n_traces],
-        ):
-            f_fixed_s = log_model(x_data, 0.0, L_prime_s, L2_s, c_pipi_s)
+        )):
+            a_s = a_samples[i]  # Use sampled lattice spacing
+            f_fixed_s = log_model(x_data, 0.0, L_prime_s, L2_s, c_pipi_s, a_val=a_s)
             y0_s = np.sum(weights * (y_data - f_fixed_s)) / np.sum(weights)
             y_bootstrap.append(
-                log_model(x_fit, y0_s, L_prime_s, L2_s, c_pipi_s)
+                log_model(x_fit, y0_s, L_prime_s, L2_s, c_pipi_s, a_val=a_s)
             )
 
         if y_bootstrap:
