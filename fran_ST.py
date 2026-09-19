@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 # --- Set Parameters ---
 A_types = ['Ar0', 'Api12']
 A_index = 0     # Set manually (0 or 1)
-LQCD = True   # Set manually (True or False)
+LQCD = True  # Set manually (True or False)
 
 gamma_E = 0.5772156649
 a_fm = 0.0633          # Lattice spacing parameter
@@ -95,7 +95,7 @@ for idx, row in df_st.iterrows():
 
 plt.xlabel(r'$\mu_l$')
 plt.ylabel(r'$\sigma a^2$')
-title_st = "LQCD-dependent ST Model" if LQCD else "Standard ST Model"
+title_st = "Full ST Model" if LQCD else "ST Model"
 plt.title(f'{title_st} Predictions vs Bulava Data ({A_types[A_index]})')
 plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
 plt.grid(True, linestyle='--', alpha=0.6)

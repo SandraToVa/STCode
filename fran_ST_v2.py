@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 # --- Set Parameters ---
 A_types = ['Ar0', 'Api12']
 A_index = 1   # Set manually (0 or 1)
-LQCD = True    # Set manually (True or False)
+LQCD = False    # Set manually (True or False)
 
 gamma_E = 0.5772156649
 a_fm = 0.0633          # Lattice spacing parameter
@@ -22,7 +22,14 @@ ck = 0.4     # Scalar parameter ck, can vary between 0.4, 0.5, 0.6
 m_k_bar = 485.0   # Reference Kaon mass \bar{m}_K MeV
 
 lqcd_str = "_full" if LQCD else ""
-st_fit_file = f'fit_results{lqcd_str}_ST_global_{A_types[A_index]}.csv'
+if LQCD:
+    fit_path_true = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/All fitted/All fitted ST/fit_results{lqcd_str}_ST_global_{A_types[A_index]}.csv'
+
+    st_fit_file = fit_path_true
+else:
+    fit_path_false = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/fit_results{lqcd_str}_ST_global_{A_types[A_index]}.csv'
+    st_fit_file = fit_path_false
+
 data_file = '/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/sbdata_Francesco/best_sigma_fit.csv'
 
 ensembles = ["D200", "N200", "N203"]
@@ -195,7 +202,7 @@ for idx, row in df_st.iterrows():
 
 plt.xlabel(r'$\mu_l$')
 plt.ylabel(r'$\sigma a^2$')
-title_st = "LQCD-dependent ST Model" if LQCD else "Standard ST Model"
+title_st = "Full ST Model" if LQCD else "ST Model"
 plt.title(f'{title_st} Predictions vs Bulava Data ({A_types[A_index]})')
 plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
 plt.grid(True, linestyle='--', alpha=0.6)

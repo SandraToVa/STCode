@@ -20,7 +20,7 @@ m_k_bar = 485.0   # Reference Kaon mass \bar{m}_K MeV
 mu_MeV = 200
 
 data_file = '/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/sbdata_Francesco/best_sigma_fit.csv'
-log_fit_file = f'fit_results_log_global_{A_types[A_index]}.csv'
+log_fit_file = f'fit_results_full_global_logarithmic_{A_types[A_index]}.csv'
 
 ensembles = ["D200", "N200", "N203"]
 m_pi_ens = {'D200': 200, 'N200': 280, 'N203': 340}
@@ -82,7 +82,7 @@ for idx, row in df_log.iterrows():
 
 plt.xlabel(r'$\mu_l$')
 plt.ylabel(r'$\sigma a^2$')
-plt.title(f'Logarithmic Model Predictions vs Bulava Data ({A_types[A_index]})')
+plt.title(f'Full Logarithmic Model Predictions vs Bulava Data ({A_types[A_index]})')
 plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
 plt.grid(True, linestyle='--', alpha=0.6)
 plt.tight_layout()

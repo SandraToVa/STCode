@@ -9,7 +9,7 @@ import json
 
 # --- Set Index & Files ---
 A_types = ['Ar0', 'Api12']
-A_index = 1  # Set manually (0 or 1)
+A_index = 0  # Set manually (0 or 1)
 
 a_fm = 0.0633 
 a_fm_err = np.sqrt(0.0004**2 + 0.0006**2)         # Lattice spacing parameter
@@ -138,7 +138,7 @@ for idx, row in df_log.iterrows():
 
 plt.xlabel(r'$\mu_l$')
 plt.ylabel(r'$\sigma a^2$')
-plt.title(f'Global Logarithmic Model Predictions vs Bulava Data ({A_types[A_index]})')
+plt.title(f'Logarithmic Model Predictions vs Bulava Data ({A_types[A_index]})')
 plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
 plt.grid(True, linestyle='--', alpha=0.6)
 plt.tight_layout()
