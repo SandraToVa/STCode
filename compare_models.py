@@ -1,54 +1,66 @@
 
-# Code to compare the goodness of fit for the three models (Linear, Quadratic, Logarithmic)
-# using the chi-squared and AIC criteria.[cite: 2]
-# This updated version evaluates all branches and selects the BEST fit based on the lowest AIC.
+# Read every fit-results CSV file and print chi^2, reduced chi^2, p-value,
+# and AIC for every row in every file.
+
+import glob
+import os
 
 import pandas as pd
 
-A_types = ['Ar0', 'Api12']
-A_index = 0
+base_dir = os.path.dirname(__file__)
 
-models = {
-    'Linear': ('fit_results_linear_global_' + A_types[A_index] + '.csv', 1), # k=1
-    'Logarithmic': ('fit_results_log_global_' + A_types[A_index] + '.csv', 2), # k=2 (assuming s0, c_pipi)
-    'Soto-Tarrus': ('fit_results_ST_global_' + A_types[A_index] + '.csv', 2) # k=2 
+model_files = {
+    'Linear': sorted(glob.glob(os.path.join(base_dir, 'fit_results_linear_global_MC*.csv'))),
+    'Logarithmic': sorted(glob.glob(os.path.join(base_dir, 'fit_results_log_global*.csv'))),
+    'Soto-Tarrus': sorted(glob.glob(os.path.join(base_dir, 'fit_results_ST_global*.csv'))),
 }
 
+# Use the same k value as in the original comparison script.
+model_k = {
+    'Linear': 1,
+    'Logarithmic': 2,
+    'Soto-Tarrus': 3,
+}
 
-data_type_to_check = 'smeared' # Change to 'smeared' if needed
+print('=== All fit statistics (all rows, all files) ===')
 
-print("=== Goodness of Fit Comparison (Best Branches) ===")
-for model_name, (filename, k) in models.items(): #[cite: 2]
-    try:
-        df = pd.read_csv(filename) #[cite: 2]
-        
-        # Filter for the specific data type
-        df_filtered = df[df['Data_Type'] == data_type_to_check].copy() #[cite: 2]
-        
-        if df_filtered.empty:
-            print(f"--- {model_name} Model ---")
-            print(f"No data found for Data_Type: '{data_type_to_check}'\n")
+for model_name, filenames in model_files.items():
+    if not filenames:
+        print(f'No files found for {model_name}.')
+        continue
+
+    k = model_k[model_name]
+
+    for filename in filenames:
+        print(f'\n--- {model_name}: {os.path.basename(filename)} ---')
+
+        try:
+            df = pd.read_csv(filename)
+        except Exception as exc:
+            print(f'Could not load {filename}: {exc}')
             continue
-            
-        # Calculate AIC for all branches of this model
-        # AIC Formula: Chi^2 + 2*k [cite: 2]
-        df_filtered['AIC'] = df_filtered['chi_sq'] + 2 * k #[cite: 2]
-        
-        # --- SELECTION LOGIC ---
-        # Find the index of the row with the minimum AIC score
-        best_idx = df_filtered['AIC'].idxmin()
-        best_row = df_filtered.loc[best_idx]
-        
-        chi2 = best_row['chi_sq'] #[cite: 2]
-        red_chi2 = best_row['red_chi_sq'] #[cite: 2]
-        p_value = best_row['p_value'] #[cite: 2]
-        best_aic = best_row['AIC']
-        
-        print(f"--- {model_name} Model ---") #[cite: 2]
-        print(f"Selected Best Branch (Row Index {best_idx})")
-        print(f"Chi-Sq: {chi2:.2f} | Reduced Chi-Sq: {red_chi2:.2f} | P-Value: {p_value:.2f} | AIC: {best_aic:.2f} \n") #[cite: 2]
-        
-    except Exception as e: #[cite: 2]
-        print(f"Could not load/parse {model_name} from {filename}: {e}\n") #[cite: 2]
 
-print("Note: The model with the LOWEST AIC is preferred.") #[cite: 2]
+        if df.empty:
+            print('No data found in this file.')
+            continue
+
+        # AIC formula used in the original script.
+        n = 12
+        df['AIC'] = df['chi_sq'] + 2.0 * k + 2.0 * k * (k + 1) / (n - k - 1)
+
+        for _, row in df.iterrows():
+            ensemble = row.get('Ensemble', '')
+            data_type = row.get('Data_Type', '')
+            branch = row.get('Branch', '')
+            chi2 = row.get('chi_sq', '')
+            red_chi2 = row.get('red_chi_sq', '')
+            p_value = row.get('p_value', '')
+            aic = row.get('AIC', '')
+
+            print(
+                f"{ensemble} | {data_type} | {branch} | "
+                f"chi2 = {chi2:.10g} | red_chi2 = {red_chi2:.10g} | "
+                f"p_value = {p_value:.10g} | AIC = {aic:.10g}"
+            )
+
+print('\nDone.')
