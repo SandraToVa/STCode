@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import ast
 
-def process_trace_data(file_path, output_path="summary_statistics.csv"):
+def process_trace_data(file_path, output_path="summary_statistics_theo.csv"):
     # 1. Load the CSV file
     # Replace 'your_data.csv' with the actual path to your file
     df = pd.read_csv(file_path)
@@ -50,4 +50,7 @@ def process_trace_data(file_path, output_path="summary_statistics.csv"):
 # --- How to run it ---
 # Call the function with your specific file name
 summary_stats, full_processed_data = process_trace_data('fit_results_log_global_Ar0.csv')
+
+#summary_stats, full_processed_data = process_trace_data('/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Real sigma/fit_results_theo_log_Ar0.csv')
+
 
