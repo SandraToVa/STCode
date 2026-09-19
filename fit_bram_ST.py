@@ -21,13 +21,13 @@ A_types = ['Ar0', 'Api12']
 A_index = 0
 LQCD = False
 # Define lower and upper limits matching parameter order: [y_0, c_l, c2_l, gamma]
-lower_bounds1 = [-np.inf, -np.inf, 1e-15]
+lower_bounds1 = [-np.inf, -np.inf, -np.inf]
 upper_bounds1 = [ np.inf,  np.inf, np.inf]
 bounds1 = (lower_bounds1, upper_bounds1)
 # c2_l can be negative but curve_fit only accepts one-sided bounds
 # First we work with positive numbers and look at the chi^2/dof and p-value to see if the fit is reasonable.
 # Then we do the same for negative numbers and compare the results.
-lower_bounds2 = [-np.inf, -np.inf, 200.0, 1e-15]
+lower_bounds2 = [-np.inf, -np.inf, 200.0, -np.inf]
 upper_bounds2 = [ np.inf,  np.inf,  600.0, np.inf]
 bounds2 = (lower_bounds2, upper_bounds2)
 
@@ -54,14 +54,16 @@ def calculate_dimensionless(df_row, prefix):
     return x, x_err, y, y_err
 
 def model_func_dim(x, y_0, c_l, gamma):
-    term1 = (c_l**2 / (2 * np.pi)) * x**2 * np.log(x**2)
+    term1 = (c_l**2 / (2.0 * np.pi)) * x**2 * np.log(x**2)
     term2 = gamma * x**2
     
     return y_0 + term1 * term2
 
 def model_func2_dim(x, y_0, c_l, c2_l, gamma):
-    z = x + c_l/c2_l
-    term1 = (c_l**2 / (2 * np.pi)) * z**2 * np.log(z**2)
+    z = x + c2_l/c_l
+    log_arg = z**2
+    log_arg = np.maximum(log_arg, 1e-15)  # Avoid log
+    term1 = (c_l**2 / (2.0 * np.pi)) * z**2 * np.log(log_arg)
     term2 = gamma * z**2
     
     return y_0 + term1 * term2

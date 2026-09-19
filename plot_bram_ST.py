@@ -44,14 +44,16 @@ def calculate_dimensionless(df_row, prefix):
 
 # Model functions
 def model_func_dim(x, y_0, c_l, gamma):
-    term1 = (c_l**2 / (2 * np.pi)) * x**2 * np.log(x**2)
+    term1 = (c_l**2 / (2.0 * np.pi)) * x**2 * np.log(x**2)
     term2 = gamma * x**2
     
     return y_0 + term1 * term2
 
 def model_func2_dim(x, y_0, c_l, c2_l, gamma):
-    z = x + c_l/c2_l
-    term1 = (c_l**2 / (2 * np.pi)) * z**2 * np.log(z**2)
+    z = x + c2_l/c_l
+    log_arg = z**2
+    log_arg = np.maximum(log_arg, 1e-15)  # Avoid log
+    term1 = (c_l**2 / (2.0 * np.pi)) * z**2 * np.log(log_arg)
     term2 = gamma * z**2
     
     return y_0 + term1 * term2
