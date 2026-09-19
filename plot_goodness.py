@@ -24,7 +24,7 @@ glob = True
 
 if glob == True:
     # Load the fit results
-    df_lin = pd.read_csv(f'fit_results_linear_global_{A_types[A_index]}.csv')
+    df_lin = pd.read_csv(f'fit_results_linear_global_MC_{A_types[A_index]}.csv')
     df_log = pd.read_csv(f'fit_results_log_global_{A_types[A_index]}.csv')
     df_ST = pd.read_csv(f'fit_results_ST_global_{A_types[A_index]}.csv')
     #When global fit is performed
@@ -33,7 +33,7 @@ if glob == True:
     pivot_ST = df_ST.set_index('Data_Type')[['p_value']]
 if glob == False:
     # Load the fit results
-    df_lin = pd.read_csv(f'fit_results_linear_{A_types[A_index]}.csv')
+    df_lin = pd.read_csv(f'fit_results_linear_MC_{A_types[A_index]}.csv')
     df_log = pd.read_csv(f'fit_results_log_{A_types[A_index]}.csv')
     df_ST = pd.read_csv(f'fit_results_ST_{A_types[A_index]}.csv')
     # Create a combined configuration label (Ensemble + Data Type)
