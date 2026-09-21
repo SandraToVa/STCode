@@ -2,7 +2,7 @@
 # computes dimensionless variables directly from lattice data,
 # performs the global fit to find a universal y_0, c_l (and c2_l if LQCD=True),
 # calculates effective errors and p-values,
-# and saves the results to fit_results_ST_global_dim.csv.
+# and saves the results to fit_results_ST_global.csv.
 
 import pandas as pd
 import numpy as np
@@ -18,8 +18,8 @@ r0_fm = 0.4547
 r0_MeV = r0_fm / hbar_c
 
 A_types = ['Ar0', 'Api12']
-A_index = 1
-LQCD = True
+A_index = 0
+LQCD = False
 # Define lower and upper limits matching parameter order: [y_0, c_l, c2_l, gamma]
 lower_bounds1 = [-np.inf, -np.inf, -np.inf]
 upper_bounds1 = [ np.inf,  np.inf, np.inf]
@@ -59,7 +59,7 @@ def model_func_dim(x, y_0, c_l, gamma):
     term1 = (c_l**2 / (2.0 * np.pi)) * x**2 * np.log(x**2)
     term2 = gamma * x**2
     
-    return y_0 + term1 * term2
+    return y_0 + term1 + term2
 
 def model_func2_dim(x, y_0, c_l, c2_l, gamma):
     z = x + c2_l/c_l
@@ -68,7 +68,7 @@ def model_func2_dim(x, y_0, c_l, c2_l, gamma):
     term1 = (c_l**2 / (2.0 * np.pi)) * z**2 * np.log(log_arg)
     term2 = gamma * z**2
     
-    return y_0 + term1 * term2
+    return y_0 + term1 + term2
 
 # =============================================================================
 # 3. Load Data
@@ -145,7 +145,7 @@ for prefix in data_types:
 
     else:
         # -----------------------------------------------------------------
-        # GLOBAL FIT: LQCD = True (Nou Model amb c2_l)
+        # GLOBAL FIT: LQCD = True (New Model with c2_l)
         # -----------------------------------------------------------------
         try:
             popt_init, _ = curve_fit(
