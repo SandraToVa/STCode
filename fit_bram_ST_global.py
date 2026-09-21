@@ -70,6 +70,31 @@ def model_func2_dim(x, y_0, c_l, c2_l, gamma):
     
     return y_0 + term1 + term2
 
+def find_best_p0_model2(x_data, y_data, y_err):
+    best_chi2 = np.inf
+    best_p0 = [np.mean(y_data), 0.01, 400.0, 1.0]
+    
+    # Sweep potential starting scales for c_l, c2_l, and gamma
+    c_l_vals = [-100.0, -10.0, -0.1, -0.01, -0.001, 0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 400.0]
+    c2_l_vals = [250.0, 400.0, 550.0]  # Kept inside (200, 600)
+    gamma_vals = [-10.0, -1.0, 0.0, 1.0, 10.0]
+    
+    y0_guess = np.mean(y_data)
+    
+    for cl in c_l_vals:
+        for c2l in c2_l_vals:
+            for g in gamma_vals:
+                p_test = [y0_guess, cl, c2l, g]
+                try:
+                    y_pred = model_func2_dim(x_data, *p_test)
+                    chi2_val = np.sum(((y_data - y_pred) / y_err) ** 2)
+                    if np.isfinite(chi2_val) and chi2_val < best_chi2:
+                        best_chi2 = chi2_val
+                        best_p0 = p_test
+                except Exception:
+                    continue
+    return best_p0
+
 # =============================================================================
 # 3. Load Data
 # =============================================================================
@@ -147,30 +172,41 @@ for prefix in data_types:
         # -----------------------------------------------------------------
         # GLOBAL FIT: LQCD = True (New Model with c2_l)
         # -----------------------------------------------------------------
+        # 1. Dynamic Grid Search for initial p0
+        p0_initial = find_best_p0_model2(x_arr, y_arr, y_err_arr)
+
+        # Attempt initial fit to refine p0
         try:
             popt_init, _ = curve_fit(
                 model_func2_dim, x_arr, y_arr, 
-                sigma=y_err_arr, absolute_sigma=True, maxfev=10000,
-                p0=[np.mean(y_arr), 1.0, 200.0, 1.0],
-                bounds=bounds2
+                sigma=y_err_arr, absolute_sigma=True, maxfev=20000,
+                p0=p0_initial,
+                bounds=bounds2,
+                method='trf',
+                x_scale='jac'
             )
-            c_l_guess, c2_l_guess, gamma_guess = popt_init[1], popt_init[2], popt_init[3]
-        except:
-            c_l_guess, c2_l_guess, gamma_guess = 1.0, 200.0, 1.0
+            p0_second = popt_init
+        except Exception:
+            # Fallback to grid search result if initial fit fails
+            p0_second = p0_initial
             
+        c_l_guess, c2_l_guess, gamma_guess = p0_second[1], p0_second[2], p0_second[3]
+
         def effective_y_err2(c_l_est, c2_l_est, gamma_est):
-            z = x_arr + c2_l_est/c_l_est
-            log_arg = (z**2) 
-            log_arg = np.maximum(log_arg, 1e-15) 
-                
+            z = x_arr + c2_l_est / c_l_est
+            log_arg = np.maximum(z**2, 1e-15) 
             df_dx = z * (2 * gamma_est + (c_l_est**2 / np.pi) * (1 + np.log(log_arg)))
             return np.sqrt(y_err_arr**2 + (df_dx * x_err_arr)**2)
 
-
         try:
+            eff_err = effective_y_err2(c_l_guess, c2_l_guess, gamma_guess)
             popt, pcov = curve_fit(
                 model_func2_dim, x_arr, y_arr, 
-                sigma=effective_y_err2(c_l_guess, c2_l_guess, gamma_guess), absolute_sigma=True, maxfev=10000, bounds=bounds2
+                sigma=eff_err, absolute_sigma=True, maxfev=50000, 
+                p0=p0_second,  # Uses refined popt_init if successful, else p0_initial
+                bounds=bounds2,
+                method='trf',
+                x_scale='jac'
             )
             res_dict['y_0'] = popt[0]
             res_dict['y_0_err'] = np.sqrt(np.diag(pcov))[0]
@@ -184,12 +220,12 @@ for prefix in data_types:
             res_dict['x_min'] = float(np.min(x_arr))
             res_dict['x_max'] = float(np.max(x_arr))
 
-            residuals = y_arr - model_func2_dim(x_arr, popt[0], popt[1], popt[2], popt[3])
+            residuals = y_arr - model_func2_dim(x_arr, *popt)
             chi_sq = np.sum((residuals / effective_y_err2(popt[1], popt[2], popt[3]))**2)
             dof = len(x_arr) - 4
 
-        except RuntimeError:
-            print(f"Fit failed for Data Type: {prefix} (Model 2)")
+        except Exception as e:
+            print(f"Fit failed for Data Type: {prefix} (Model 2). Reason: {e}")
             continue
 
     # Càlculs estadístics comuns
@@ -200,17 +236,21 @@ for prefix in data_types:
 
     results.append(res_dict)
 
-results_df = pd.DataFrame(results)
-results_df.to_csv(filename, index=False)
+# Safe DataFrame printing
+if results:
+    results_df = pd.DataFrame(results)
+    results_df.to_csv(filename, index=False)
 
-print("\n--- GLOBAL DIMENSIONLESS ST FIT COMPLETE ---")
-print("Model used:", "LQCD (c2_l active)" if LQCD else "Original (c2_l = 0)")
-print("Results successfully saved to", filename)
-print("\nSummary of Extracted Parameters (y_0 = r0^2 * sigma_0):")
+    print("\n--- GLOBAL DIMENSIONLESS ST FIT COMPLETE ---")
+    print("Model used:", "LQCD (c2_l active)" if LQCD else "Original (c2_l = 0)")
+    print("Results successfully saved to", filename)
+    print("\nSummary of Extracted Parameters (y_0 = r0^2 * sigma_0):")
 
-cols_to_print = ['Data_Type', 'y_0', 'c_l']
-if LQCD:
-    cols_to_print.append('c2_l')
-cols_to_print.extend(['gamma', 'red_chi_sq', 'p_value'])
+    cols_to_print = ['Data_Type', 'y_0', 'c_l']
+    if LQCD:
+        cols_to_print.append('c2_l')
+    cols_to_print.extend(['gamma', 'red_chi_sq', 'p_value'])
 
-print(results_df[cols_to_print].to_string(index=False))
+    print(results_df[cols_to_print].to_string(index=False))
+else:
+    print("\nNo fits converged successfully. Please check your model parameters and bounds.")
