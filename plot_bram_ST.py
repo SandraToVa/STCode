@@ -19,7 +19,7 @@ r0_MeV = r0_fm / hbar_c
 A_types = ['Ar0', 'Api12']
 A_latex = ['r_0', '\\pi/12']
 A_index = 0
-LQCD = False
+LQCD = True
 
 data_file = f'/Users/sandra/Documents/Doctorat/Projectes PhD/String tension/STCode/Data/data_bram_{A_types[A_index]}.csv'
 lqcd_str = "_full" if LQCD else ""
